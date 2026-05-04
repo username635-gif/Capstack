@@ -4,8 +4,20 @@
   "private": true,
   "main": "index.ts",
   "types": "index.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "prisma": "^7.8.0"
+    "dotenv": "^17.4.2",
+    "prisma": "^7.8.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
