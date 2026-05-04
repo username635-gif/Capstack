@@ -1,0 +1,706 @@
+// schema.prisma
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgcrypto, pg_trgm, citext, pgvector(map: "vector")]
+}
+
+// ============================================================
+//  TENANCY: Lenders (us + partners), Users
+// ============================================================
+
+model Lender {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  type            LenderType
+  countryCode     String   @default("ZA")
+  baseCurrency    String   @default("ZAR")
+  primaryRegulator String?
+  warehouseFacilityId String?
+  isActive        Boolean  @default(true)
+
+  staff           Staff[]
+  products        LoanProduct[]
+  partners        Partner[]
+  loans           Loan[]
+  ledgerAccounts  LedgerAccount[]
+
+  createdAt       DateTime @default(now())
+}
+
+enum LenderType {
+  OWN_BOOK
+  PARTNER_OF_RECORD
+  MARKETPLACE
+}
+
+model Partner {
+  id              String   @id @default(cuid())
+  lenderId        String
+  name            String
+  slug            String   @unique
+  apiKeyHash      String   @unique
+  webhookUrl      String?
+  webhookSecret   String?
+  isLive          Boolean  @default(false)
+  feeShareBps     Int      @default(0)  // basis points of revenue shared back
+
+  lender          Lender   @relation(fields: [lenderId], references: [id])
+  applications    Application[]
+  loans           Loan[]
+  apiCredentials  ApiCredential[]
+
+  createdAt       DateTime @default(now())
+}
+
+model ApiCredential {
+  id          String   @id @default(cuid())
+  partnerId   String
+  keyId       String   @unique
+  hashedSecret String
+  scopes      String[]
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+
+  partner     Partner  @relation(fields: [partnerId], references: [id])
+
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime?
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  lenderId    String
+  email       String   @unique
+  fullName    String
+  role        StaffRole
+  clerkId     String   @unique
+  twoFactorEnabled Boolean @default(true)
+
+  lender      Lender   @relation(fields: [lenderId], references: [id])
+  decisions   CreditDecision[]
+}
+
+enum StaffRole {
+  ADMIN
+  CREDIT_OFFICER
+  UNDERWRITER
+  COLLECTIONS
+  COMPLIANCE
+  FINANCE
+  READONLY
+}
+
+// ============================================================
+//  PRODUCTS: How the lender packages credit
+// ============================================================
+
+model LoanProduct {
+  id              String   @id @default(cuid())
+  lenderId        String
+  name            String
+  type            ProductType
+  currency        String   @default("ZAR")
+  minAmount       BigInt   // cents
+  maxAmount       BigInt
+  minTermDays     Int
+  maxTermDays     Int
+  amortizationMethod AmortizationMethod
+  interestModel   InterestModel
+  fixedFeeAmount  BigInt?  // cents
+  feePctBps       Int?     // basis points of principal
+  defaultAprBps   Int      // 1500 = 15.00%
+  policyId        String?  // link to credit policy
+  isActive        Boolean  @default(true)
+
+  lender          Lender   @relation(fields: [lenderId], references: [id])
+  applications    Application[]
+  loans           Loan[]
+
+  createdAt       DateTime @default(now())
+}
+
+enum ProductType {
+  TERM_LOAN
+  BNPL
+  CASH_ADVANCE
+  LINE_OF_CREDIT
+  INVOICE_FACTORING
+  SALARY_ADVANCE
+}
+
+enum AmortizationMethod {
+  EQUAL_INSTALLMENT
+  BULLET
+  INTEREST_ONLY
+  DECLINING_BALANCE
+}
+
+enum InterestModel {
+  FIXED_APR
+  VARIABLE_APR
+  FACTOR_RATE
+  FEE_ONLY
+}
+
+// ============================================================
+//  BORROWERS: Individuals + Businesses
+// ============================================================
+
+model Borrower {
+  id              String   @id @default(cuid())
+  type            BorrowerType
+  email           String
+  phone           String
+  countryCode     String   @default("ZA")
+  riskRating      String?  // INTERNAL: A | B | C | D | E
+  blacklistFlag   Boolean  @default(false)
+  metadata        Json?
+
+  individual      IndividualBorrower?
+  business        BusinessBorrower?
+  applications    Application[]
+  loans           Loan[]
+  bankAccounts    LinkedBankAccount[]
+  documents       BorrowerDocument[]
+  kycChecks       KycCheck[]
+  consents        Consent[]
+  notifications   Notification[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([email])
+  @@index([phone])
+}
+
+enum BorrowerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+model IndividualBorrower {
+  id              String   @id @default(cuid())
+  borrowerId      String   @unique
+  fullName        String
+  idNumber        String   // encrypted via pgcrypto
+  dateOfBirth     DateTime
+  gender          String?
+  monthlyIncome   BigInt?  // cents
+  employmentStatus String?
+  employer        String?
+  occupation      String?
+  homeLanguage    String?
+  residentialAddress Json
+  nationality     String?
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+}
+
+model BusinessBorrower {
+  id              String   @id @default(cuid())
+  borrowerId      String   @unique
+  legalName       String
+  tradingName     String?
+  registrationNumber String
+  taxNumber       String?
+  industry        String?
+  founded         DateTime?
+  monthlyTurnover BigInt?
+  numberOfEmployees Int?
+  registeredAddress Json
+  ownershipStructure Json  // beneficial owners
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+  directors       BusinessDirector[]
+}
+
+model BusinessDirector {
+  id              String   @id @default(cuid())
+  businessId      String
+  fullName        String
+  idNumber        String   // encrypted
+  isPep           Boolean  @default(false)
+  ownershipPct    Decimal? @db.Decimal(5, 2)
+
+  business        BusinessBorrower @relation(fields: [businessId], references: [id])
+}
+
+model Consent {
+  id              String   @id @default(cuid())
+  borrowerId      String
+  scope           String   // 'BUREAU', 'OPEN_BANKING', 'EMPLOYER_VERIFICATION', ...
+  grantedAt       DateTime
+  revokedAt       DateTime?
+  textVersion     String   // version of T&C agreed
+  ip              String?
+  userAgent       String?
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+
+  @@index([borrowerId, scope])
+}
+
+// ============================================================
+//  KYC, KYB, AML
+// ============================================================
+
+model KycCheck {
+  id              String   @id @default(cuid())
+  borrowerId      String
+  type            KycCheckType
+  provider        String   // ONFIDO, SMILE_ID, MANUAL
+  externalId      String?
+  status          KycStatus @default(PENDING)
+  outcome         String?
+  rawResult       Json?
+  failureReason   String?
+  expiresAt       DateTime?
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([borrowerId])
+}
+
+enum KycCheckType {
+  ID_VERIFICATION
+  LIVENESS
+  ADDRESS_VERIFICATION
+  SANCTIONS
+  PEP
+  ADVERSE_MEDIA
+  CIPC_LOOKUP        // SA company verification
+  BANK_VERIFICATION  // confirm bank account ownership
+}
+
+enum KycStatus {
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+  MANUAL_REVIEW
+  EXPIRED
+}
+
+model AmlAlert {
+  id              String   @id @default(cuid())
+  borrowerId      String?
+  loanId          String?
+  type            String   // STRUCTURING, RAPID_MOVEMENT, SANCTIONS_HIT, ...
+  severity        String   // LOW MED HIGH CRITICAL
+  details         Json
+  status          String   @default("OPEN")
+  reviewedById    String?
+  reviewedAt      DateTime?
+  filedSar        Boolean  @default(false)  // STR/SAR filed?
+
+  createdAt       DateTime @default(now())
+
+  @@index([status, severity])
+}
+
+// ============================================================
+//  APPLICATIONS & UNDERWRITING
+// ============================================================
+
+model Application {
+  id              String   @id @default(cuid())
+  partnerId       String?
+  borrowerId      String
+  productId       String
+  amountRequested BigInt   // cents
+  termDaysRequested Int
+  purpose         String?
+  channel         String   // 'web' | 'partner_api' | 'whatsapp' | 'mobile'
+  status          ApplicationStatus @default(SUBMITTED)
+  externalRef     String?  // partner's id
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+  product         LoanProduct @relation(fields: [productId], references: [id])
+  partner         Partner? @relation(fields: [partnerId], references: [id])
+  decisions       CreditDecision[]
+  loan            Loan?
+  events          ApplicationEvent[]
+
+  submittedAt     DateTime @default(now())
+  decidedAt       DateTime?
+
+  @@index([borrowerId])
+  @@index([status])
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  KYC_IN_PROGRESS
+  AWAITING_DATA      // bank link / docs
+  UNDER_REVIEW
+  AUTO_DECISIONED
+  HUMAN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+model ApplicationEvent {
+  id              String   @id @default(cuid())
+  applicationId   String
+  type            String
+  actor           String   // userId | 'AGENT' | 'SYSTEM'
+  payload         Json
+  createdAt       DateTime @default(now())
+
+  application     Application @relation(fields: [applicationId], references: [id])
+
+  @@index([applicationId])
+}
+
+model CreditDecision {
+  id              String   @id @default(cuid())
+  applicationId   String
+  modelVersion    String
+  pdScore         Float    // probability of default 0–1
+  lgdScore        Float    // loss given default 0–1
+  expectedLoss    Float
+  riskBand        String   // A B C D E
+  recommendation  String   // APPROVE | DECLINE | REFER
+  approvedAmount  BigInt?
+  approvedTermDays Int?
+  approvedAprBps  Int?
+  reasonCodes     String[] // explainable factors
+  shapValues      Json?    // per-feature contribution
+  decisionMakerId String?  // staff id if human-decisioned
+  policyExceptions String[]
+
+  application     Application @relation(fields: [applicationId], references: [id])
+  decisionMaker   Staff?      @relation(fields: [decisionMakerId], references: [id])
+
+  createdAt       DateTime @default(now())
+}
+
+// ============================================================
+//  LOANS, SCHEDULES, REPAYMENTS
+// ============================================================
+
+model Loan {
+  id              String   @id @default(cuid())
+  lenderId        String
+  partnerId       String?
+  borrowerId      String
+  productId       String
+  applicationId   String   @unique
+  loanNumber      String   @unique
+  status          LoanStatus @default(PENDING_DISBURSEMENT)
+  principal       BigInt
+  currency        String   @default("ZAR")
+  aprBps          Int
+  termDays        Int
+  startDate       DateTime
+  maturityDate    DateTime
+  disbursedAt     DateTime?
+  closedAt        DateTime?
+  daysPastDue     Int      @default(0)
+  delinquencyState String  @default("CURRENT")  // CURRENT, BUCKET_1, BUCKET_2, BUCKET_3, NPL, WRITTEN_OFF
+  outstandingPrincipal BigInt
+  outstandingInterest  BigInt @default(0)
+  outstandingFees      BigInt @default(0)
+
+  lender          Lender   @relation(fields: [lenderId], references: [id])
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+  product         LoanProduct @relation(fields: [productId], references: [id])
+  partner         Partner? @relation(fields: [partnerId], references: [id])
+  application     Application @relation(fields: [applicationId], references: [id])
+  schedule        ScheduledPayment[]
+  repayments      LoanRepayment[]
+  disbursements   Disbursement[]
+  ledgerEntries   LedgerEntry[]
+  collections     CollectionEvent[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([borrowerId])
+  @@index([status])
+  @@index([delinquencyState])
+}
+
+enum LoanStatus {
+  PENDING_DISBURSEMENT
+  ACTIVE
+  PAID_IN_FULL
+  WRITTEN_OFF
+  CHARGED_OFF
+  DEFAULTED
+  RESTRUCTURED
+}
+
+model ScheduledPayment {
+  id              String   @id @default(cuid())
+  loanId          String
+  installmentNo   Int
+  dueDate         DateTime
+  principalDue    BigInt
+  interestDue     BigInt
+  feesDue         BigInt   @default(0)
+  totalDue        BigInt
+  status          String   @default("UPCOMING")  // UPCOMING, DUE, OVERDUE, PAID, PARTIAL
+  paidAmount      BigInt   @default(0)
+  paidAt          DateTime?
+
+  loan            Loan     @relation(fields: [loanId], references: [id])
+
+  @@unique([loanId, installmentNo])
+  @@index([dueDate, status])
+}
+
+model Disbursement {
+  id              String   @id @default(cuid())
+  loanId          String
+  amount          BigInt
+  rail            String   // 'STRIPE', 'STITCH_EFT', 'PAYSHAP', 'SARB_RTGS'
+  externalRef     String?
+  bankAccountId   String?
+  status          String   @default("PENDING")  // PENDING, INITIATED, SUCCEEDED, FAILED, REVERSED
+  initiatedAt     DateTime?
+  settledAt       DateTime?
+  failureReason   String?
+  retryCount      Int      @default(0)
+
+  loan            Loan     @relation(fields: [loanId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([loanId])
+  @@index([status])
+}
+
+model LoanRepayment {
+  id              String   @id @default(cuid())
+  loanId          String
+  amount          BigInt
+  receivedAt      DateTime
+  rail            String
+  externalRef     String?
+  allocation      Json     // { fees: 100, interest: 200, principal: 700 }
+  scheduledPaymentId String?
+
+  loan            Loan     @relation(fields: [loanId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([loanId])
+}
+
+model LinkedBankAccount {
+  id              String   @id @default(cuid())
+  borrowerId      String
+  provider        String   // STITCH | TRUID | MONO
+  externalId      String
+  bankName        String
+  accountNumber   String   // encrypted
+  accountType     String
+  isVerified      Boolean  @default(false)
+  isPrimary       Boolean  @default(false)
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+  transactions    BankTransaction[]
+  statements      BankStatement[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([provider, externalId])
+}
+
+model BankTransaction {
+  id              String   @id @default(cuid())
+  accountId       String
+  externalId      String
+  date            DateTime
+  amount          BigInt
+  description     String
+  type            String   // CREDIT | DEBIT
+  category        String?  // AI-categorized
+  merchantName    String?
+  isRecurring     Boolean  @default(false)
+
+  account         LinkedBankAccount @relation(fields: [accountId], references: [id])
+
+  @@unique([accountId, externalId])
+  @@index([accountId, date])
+}
+
+model BankStatement {
+  id              String   @id @default(cuid())
+  accountId       String
+  periodStart     DateTime
+  periodEnd       DateTime
+  documentUrl     String?
+  parsedData      Json?
+  isVerified      Boolean  @default(false)
+
+  account         LinkedBankAccount @relation(fields: [accountId], references: [id])
+}
+
+model BorrowerDocument {
+  id              String   @id @default(cuid())
+  borrowerId      String
+  type            String   // PAYSLIP, BANK_STATEMENT_PDF, INVOICE, FINANCIALS
+  fileName        String
+  storageKey      String
+  parsedData      Json?
+  ocrText         String?  @db.Text
+
+  borrower        Borrower @relation(fields: [borrowerId], references: [id])
+
+  createdAt       DateTime @default(now())
+}
+
+// ============================================================
+//  LEDGER (event-sourced, append-only)
+// ============================================================
+
+model LedgerAccount {
+  id              String   @id @default(cuid())
+  lenderId        String
+  code            String   // 1100, 4100, etc.
+  name            String
+  accountType     String   // ASSET LIABILITY EQUITY REVENUE EXPENSE
+  parentId        String?
+
+  lender          Lender   @relation(fields: [lenderId], references: [id])
+  entries         LedgerEntry[]
+
+  @@unique([lenderId, code])
+}
+
+// IMMUTABLE — no updates, no deletes
+model LedgerEntry {
+  id              String   @id @default(cuid())
+  txnId           String
+  accountId       String
+  loanId          String?
+  amount          BigInt   // signed; positive = debit, negative = credit
+  date            DateTime
+  description     String
+  reference       String
+
+  account         LedgerAccount @relation(fields: [accountId], references: [id])
+  loan            Loan?         @relation(fields: [loanId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([txnId])
+  @@index([accountId, date])
+}
+
+// ============================================================
+//  COLLECTIONS
+// ============================================================
+
+model CollectionEvent {
+  id              String   @id @default(cuid())
+  loanId          String
+  type            String   // REMINDER_SENT, CALL_MADE, PROMISE_TO_PAY, BROKEN_PTP, RESTRUCTURE_OFFERED, WRITTEN_OFF
+  channel         String?  // SMS, EMAIL, CALL, WHATSAPP
+  payload         Json?
+  agentRunId      String?
+  outcome         String?
+
+  loan            Loan     @relation(fields: [loanId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([loanId])
+}
+
+model RestructureOffer {
+  id              String   @id @default(cuid())
+  loanId          String   @unique
+  oldSchedule     Json
+  newSchedule     Json
+  feesWaived      BigInt   @default(0)
+  status          String   @default("PROPOSED")  // PROPOSED, ACCEPTED, EXECUTED, EXPIRED
+  acceptedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+}
+
+// ============================================================
+//  AI: AGENT RUNS, MODELS
+// ============================================================
+
+model ModelVersion {
+  id              String   @id @default(cuid())
+  name            String   // 'pd_individual_v3', 'lgd_business_v1', ...
+  version         String
+  framework       String   // 'XGBOOST', 'LIGHTGBM', 'NN'
+  trainedAt       DateTime
+  metrics         Json     // AUC, KS, PSI per slice
+  artifactUrl     String   // R2 path to .joblib / .onnx
+  status          String   // SHADOW, CHAMPION, RETIRED
+  trafficPct      Int      @default(0)  // for canary deploys
+
+  @@unique([name, version])
+}
+
+model AgentRun {
+  id              String   @id @default(cuid())
+  partnerId       String?
+  agentName       String
+  inputPayload    Json
+  status          String   @default("RUNNING")
+  steps           Json[]
+  outputPayload   Json?
+  totalTokens     Int?
+  totalCostUsd    Decimal? @db.Decimal(12, 6)
+  durationMs      Int?
+  langfuseTraceId String?
+
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+
+  @@index([agentName])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  actor           String
+  actorType       String   // USER, SYSTEM, AGENT, PARTNER
+  action          String
+  resource        String
+  resourceId      String
+  before          Json?
+  after           Json?
+  ip              String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([resource, resourceId])
+}
+
+model Notification {
+  id              String   @id @default(cuid())
+  borrowerId      String?
+  staffId         String?
+  type            String
+  channel         String
+  subject         String?
+  body            String   @db.Text
+  status          String   @default("PENDING")
+  externalRef     String?
+
+  borrower        Borrower? @relation(fields: [borrowerId], references: [id])
+
+  createdAt       DateTime @default(now())
+  sentAt          DateTime?
+}
