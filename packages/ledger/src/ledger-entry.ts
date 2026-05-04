@@ -65,16 +65,15 @@ export interface LedgerTransaction {
  * Throws if the transaction is unbalanced.
  */
 export function validateTransaction(entries: ReadonlyArray<LedgerEntry>): void {
-  let debits = Money.fromCents(0);
-  let credits = Money.fromCents(0);
+  // Pattern 5 + 8 — filter → reduce pipeline replaces the manual accumulator loop.
+  // sumByType is a small composed function: filter entries by type, then fold amounts.
+  const sumByType = (type: EntryType) =>
+    entries
+      .filter(e => e.type === type)
+      .reduce((acc, e) => acc.add(e.amount), Money.fromCents(0));
 
-  for (const entry of entries) {
-    if (entry.type === 'DEBIT') {
-      debits = debits.add(entry.amount);
-    } else {
-      credits = credits.add(entry.amount);
-    }
-  }
+  const debits = sumByType('DEBIT');
+  const credits = sumByType('CREDIT');
 
   if (!debits.equals(credits)) {
     throw new Error(

@@ -39,6 +39,30 @@ import { redis } from '@/lib/redis';
 
 const IDEMPOTENCY_TTL = 60 * 60 * 24; // 24 hours — matches typical session length
 
+// Body shape for loan application requests
+type ApplicationBody = {
+  borrowerId: string;
+  productId: string;
+  amountRequested: number;
+  termDaysRequested: number;
+  purpose?: string;
+  channel?: string;
+  externalRef?: string;
+};
+
+/**
+ * Pattern 6 — async to() helper.
+ * Wraps any Promise in a [error, result] tuple so route handlers can handle
+ * errors as values instead of wrapping every async call in try/catch.
+ */
+async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
+  try {
+    return [null, await p];
+  } catch (err) {
+    return [err instanceof Error ? err : new Error(String(err)), null];
+  }
+}
+
 export async function POST(req: NextRequest) {
   const idempotencyKey = req.headers.get('idempotency-key');
 
@@ -53,25 +77,24 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let body: {
-    borrowerId: string;
-    productId: string;
-    amountRequested: number;
-    termDaysRequested: number;
-    purpose?: string;
-    channel?: string;
-    externalRef?: string;
-  };
+  // Pattern 6 — to(): body parse error becomes a value, not a thrown exception
+  const [parseErr, body] = await to(req.json() as Promise<ApplicationBody>);
+  if (parseErr) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
 
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  // Pattern 4 — destructuring with default values: removes ?? noise in the data object below
+  // Pattern 3 — nullish coalescing defaults declared here instead of inline in the object
+  const {
+    borrowerId,
+    productId,
+    amountRequested: requestedAmount, // renamed to free up 'amountRequested' for shorthand later
+    termDaysRequested,
+    purpose = null,
+    channel = 'partner_api',
+    externalRef = null,
+  } = body!;
 
-  const { borrowerId, productId, amountRequested, termDaysRequested, purpose, channel, externalRef } = body;
-
-  if (!borrowerId || !productId || !amountRequested || !termDaysRequested) {
+  // Pattern 1 — early return: validate required fields before touching the DB
+  if (!borrowerId || !productId || !requestedAmount || !termDaysRequested) {
     return NextResponse.json(
       { error: 'Missing required fields: borrowerId, productId, amountRequested, termDaysRequested' },
       { status: 422 }
@@ -81,30 +104,26 @@ export async function POST(req: NextRequest) {
   // Lazy import prisma so Next.js edge doesn't complain
   const { prisma } = await import('@capstack/db');
 
-  let application;
-  try {
-    application = await prisma.application.create({
+  // Pattern 6 — to(): DB errors become values, no nested try/catch needed
+  const [dbErr, application] = await to(
+    prisma.application.create({
       data: {
         borrowerId,
         productId,
-        amountRequested: BigInt(amountRequested),
+        amountRequested: BigInt(requestedAmount),
         termDaysRequested,
-        purpose: purpose ?? null,
-        channel: channel ?? 'partner_api',
-        externalRef: externalRef ?? null,
+        purpose,      // Pattern 7 — shorthand (default already set at destructuring)
+        channel,      // Pattern 7 — shorthand
+        externalRef,  // Pattern 7 — shorthand
         status: 'SUBMITTED',
       },
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Database error';
-    return NextResponse.json({ error: message }, { status: 422 });
-  }
+    })
+  );
+  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 422 });
 
-  // Serialize BigInt for JSON
-  const responseBody = {
-    ...application,
-    amountRequested: Number(application.amountRequested),
-  };
+  // Pattern 7 — property shorthand: name the transformed value to match the key name
+  const amountRequested = Number(application!.amountRequested);
+  const responseBody = { ...application!, amountRequested };
 
   // Cache the response for idempotency
   if (idempotencyKey) {

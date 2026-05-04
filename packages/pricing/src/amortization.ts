@@ -94,21 +94,19 @@ function addDays(date: Date, days: number): Date {
 export function calculateEqualInstallment(
   input: AmortizationScheduleInput
 ): AmortizationSchedule {
-  const { principalCents, aprBps, periods } = input;
+  // Pattern 4 — full destructuring so no repeated `input.` access below
+  const { principalCents, aprBps, periods, termDays } = input;
   const annualRate = aprBps / 10000; // e.g. 1200 bps → 0.12
   const periodicRate = annualRate / 12; // monthly
-  const daysPerPeriod = Math.round(input.termDays / periods);
+  const daysPerPeriod = Math.round(termDays / periods);
+  const startDate = new Date();
 
-  let schedule: ScheduledPayment[];
-  let totalPaymentCents: number;
-  let totalInterestCents: number;
-
+  // Pattern 1 — early return: handle the zero-interest edge case immediately,
+  // avoiding a deeply nested if/else that spans the whole function body.
   if (periodicRate === 0) {
-    // Zero-interest loan
     const installmentCents = Math.round(principalCents / periods);
     let balance = principalCents;
-    const startDate = new Date();
-    schedule = Array.from({ length: periods }, (_, i) => {
+    const payments = Array.from({ length: periods }, (_, i) => {
       const periodPrincipal = i === periods - 1 ? balance : installmentCents;
       balance -= periodPrincipal;
       return {
@@ -120,35 +118,39 @@ export function calculateEqualInstallment(
         remainingBalance: Money.fromCents(balance),
       };
     });
-    totalPaymentCents = principalCents;
-    totalInterestCents = 0;
-  } else {
-    // PMT = P * r / (1 - (1 + r)^-n)
-    const pmt = principalCents * periodicRate / (1 - Math.pow(1 + periodicRate, -periods));
-    const pmtCents = Math.round(pmt);
-    let balance = principalCents;
-    const startDate = new Date();
-    schedule = Array.from({ length: periods }, (_, i) => {
-      const interestCents = Math.round(balance * periodicRate);
-      let principalCentsThisPeriod = pmtCents - interestCents;
-      if (i === periods - 1) principalCentsThisPeriod = balance; // final period — pay off remainder
-      balance = Math.max(0, balance - principalCentsThisPeriod);
-      return {
-        period: i + 1,
-        dueDate: addDays(startDate, daysPerPeriod * (i + 1)),
-        principal: Money.fromCents(principalCentsThisPeriod),
-        interest: Money.fromCents(interestCents),
-        totalPayment: Money.fromCents(principalCentsThisPeriod + interestCents),
-        remainingBalance: Money.fromCents(balance),
-      };
-    });
-    totalPaymentCents = schedule.reduce((s, p) => s + p.totalPayment.getCents(), 0);
-    totalInterestCents = totalPaymentCents - principalCents;
+    return {
+      method: 'EQUAL_INSTALLMENT',
+      payments,                                      // Pattern 7 — shorthand
+      totalInterest: Money.fromCents(0),
+      totalPayments: Money.fromCents(principalCents),
+      apr: aprBps / 100,
+    };
   }
+
+  // PMT = P * r / (1 - (1 + r)^-n)
+  const pmt = principalCents * periodicRate / (1 - Math.pow(1 + periodicRate, -periods));
+  const pmtCents = Math.round(pmt);
+  let balance = principalCents;
+  const payments = Array.from({ length: periods }, (_, i) => {
+    const interestCents = Math.round(balance * periodicRate);
+    // Pattern 2 — ternary: final period absorbs rounding residual; reads as one expression
+    const principalCentsThisPeriod = i === periods - 1 ? balance : pmtCents - interestCents;
+    balance = Math.max(0, balance - principalCentsThisPeriod);
+    return {
+      period: i + 1,
+      dueDate: addDays(startDate, daysPerPeriod * (i + 1)),
+      principal: Money.fromCents(principalCentsThisPeriod),
+      interest: Money.fromCents(interestCents),
+      totalPayment: Money.fromCents(principalCentsThisPeriod + interestCents),
+      remainingBalance: Money.fromCents(balance),
+    };
+  });
+  const totalPaymentCents = payments.reduce((s, p) => s + p.totalPayment.getCents(), 0);
+  const totalInterestCents = totalPaymentCents - principalCents;
 
   return {
     method: 'EQUAL_INSTALLMENT',
-    payments: schedule,
+    payments,                                          // Pattern 7 — shorthand
     totalInterest: Money.fromCents(totalInterestCents),
     totalPayments: Money.fromCents(totalPaymentCents),
     apr: aprBps / 100,
@@ -162,13 +164,15 @@ export function calculateEqualInstallment(
 export function calculateBullet(
   input: AmortizationScheduleInput
 ): AmortizationSchedule {
-  const { principalCents, aprBps, periods } = input;
+  // Pattern 4 — full destructuring including termDays; no more `input.termDays` access
+  const { principalCents, aprBps, periods, termDays } = input;
   const periodicRate = (aprBps / 10000) / 12;
   const interestPerPeriodCents = Math.round(principalCents * periodicRate);
-  const daysPerPeriod = Math.round(input.termDays / periods);
+  const daysPerPeriod = Math.round(termDays / periods);
   const startDate = new Date();
 
-  const schedule: ScheduledPayment[] = Array.from({ length: periods }, (_, i) => {
+  // Pattern 7 — renamed schedule → payments so the return object uses shorthand
+  const payments: ScheduledPayment[] = Array.from({ length: periods }, (_, i) => {
     const isLast = i === periods - 1;
     const principalThisPeriod = isLast ? principalCents : 0;
     return {
@@ -184,7 +188,7 @@ export function calculateBullet(
   const totalInterestCents = interestPerPeriodCents * periods;
   return {
     method: 'BULLET',
-    payments: schedule,
+    payments,                                             // Pattern 7 — shorthand
     totalInterest: Money.fromCents(totalInterestCents),
     totalPayments: Money.fromCents(principalCents + totalInterestCents),
     apr: aprBps / 100,
