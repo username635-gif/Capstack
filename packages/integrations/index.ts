@@ -1,7 +1,38 @@
+/**
+ * @package @capstack/integrations
+ *
+ * Third-party payment and banking integration stubs.
+ *
+ * STATUS: STUB — all functions return placeholder data.
+ *
+ * ── STITCH (Open Banking — South Africa) ─────────────────────────────────────
+ *   Used for:
+ *     - Bank account linking (DebiCheck mandate setup)
+ *     - Instant EFT disbursements
+ *     - Bank statement retrieval (income verification)
+ *
+ *   Docs: https://stitch.money/docs
+ *   Setup:
+ *     1. Create a Stitch account at dashboard.stitch.money
+ *     2. Add STITCH_CLIENT_ID and STITCH_CLIENT_SECRET to env
+ *     3. pnpm add @stitch-money/node-sdk --filter @capstack/integrations
+ *
+ * ── STRIPE ────────────────────────────────────────────────────────────────────
+ *   Used for:
+ *     - Card payments (repayments from borrowers)
+ *     - Payouts to lender bank accounts
+ *
+ *   Docs: https://stripe.com/docs
+ *   Setup:
+ *     1. Create Stripe account, add STRIPE_SECRET_KEY to env
+ *     2. pnpm add stripe --filter @capstack/integrations
+ *
+ * SECURITY NOTE:
+ *   Never log or expose payment tokens, client secrets, or card numbers.
+ *   All Stripe webhook endpoints must verify the Stripe-Signature header.
+ */
+
 // ─── Integrations Stubs ───────────────────────────────────────────────────────
-// Placeholder interfaces and stubs for:
-//   • Stitch — open banking / bank account linking (South Africa)
-//   • Stripe — card payments and payouts
 
 // ── Stitch ───────────────────────────────────────────────────────────────────
 

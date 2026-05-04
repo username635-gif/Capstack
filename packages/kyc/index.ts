@@ -1,6 +1,33 @@
+/**
+ * @package @capstack/kyc
+ *
+ * KYC (Know Your Customer) and AML (Anti-Money Laundering) stubs.
+ *
+ * STATUS: STUB — all functions return placeholder data.
+ *   Wire up to Onfido (or alternative) when credentials are available.
+ *
+ * PLANNED INTEGRATION: Onfido
+ *   - Docs: https://documentation.onfido.com
+ *   - Required env vars: ONFIDO_API_TOKEN
+ *   - SDK:  pnpm add @onfido/api --filter @capstack/kyc
+ *
+ * KYC FLOW:
+ *   1. Call initiateKycCheck() when a borrower submits their application.
+ *   2. Onfido performs document + facial biometric checks asynchronously.
+ *   3. Onfido sends a webhook (POST /api/v1/webhooks/kyc) with the result.
+ *   4. Call getKycCheckResult() to retrieve and store the final status.
+ *   5. Update KycCheck record in database via @capstack/db.
+ *
+ * AML FLOW:
+ *   - Call runAmlCheck() before approving any loan.
+ *   - Check isPep and isSanctioned; escalate to compliance team if true.
+ *   - Store result in AmlAlert table via @capstack/db.
+ *
+ * REGULATORY REQUIREMENT:
+ *   All KYC/AML records must be retained for at least 5 years (FICA, South Africa).
+ */
+
 // ─── KYC / Identity Verification Stubs ───────────────────────────────────────
-// Placeholder interfaces and stubs for Onfido (or similar) KYC integration.
-// Replace stub implementations with real API calls when credentials are available.
 
 export type KycStatus = 'PENDING' | 'APPROVED' | 'DECLINED' | 'REFERRED' | 'ERROR';
 

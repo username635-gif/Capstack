@@ -1,3 +1,46 @@
+/**
+ * Loan amortization schedule calculators.
+ *
+ * Three repayment methods are supported:
+ *
+ *   EQUAL_INSTALLMENT (reducing balance)
+ *     Each period the borrower pays the same total amount.
+ *     The split between principal and interest changes over time:
+ *     early payments are mostly interest, later payments mostly principal.
+ *     Formula: PMT = P × r / (1 − (1 + r)^−n)
+ *       P = principal, r = periodic rate (APR / 12), n = number of periods
+ *     This is the standard mortgage / personal loan structure.
+ *
+ *   BULLET (balloon payment)
+ *     Borrower pays interest only each period.
+ *     The full principal is due on the final period.
+ *     Common for short-term SME / bridge loans.
+ *
+ *   INTEREST_ONLY
+ *     Alias for BULLET in this implementation.
+ *     In a stricter model, INTEREST_ONLY would have no terminal principal repayment
+ *     (revolving facility), but here we treat it identically to BULLET.
+ *
+ * All monetary values are stored as integer cents (bigint internally via Money).
+ * This avoids floating-point rounding errors on currency arithmetic.
+ *
+ * INPUT CONVENTION:
+ *   - principalCents: loan amount in the smallest currency unit (e.g. 100000 = ZAR 1,000.00)
+ *   - aprBps: Annual Percentage Rate in basis points (1 bps = 0.01%, so 1200 bps = 12.00% APR)
+ *   - termDays: total loan term (used only to space due dates)
+ *   - periods: number of repayment instalments (typically months)
+ *
+ * ROUNDING:
+ *   Each period's interest and principal are rounded to the nearest cent.
+ *   The final period absorbs any rounding residual so that the sum of principal
+ *   repayments exactly equals the original principal.
+ *
+ * FUTURE IMPROVEMENTS:
+ *   - Support daily accrual (actual/365) for bridging loans
+ *   - Add an upfront origination fee field
+ *   - Wire up to the LoanProduct fee structure from the DB schema
+ */
+
 import { Money } from '@capstack/ledger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

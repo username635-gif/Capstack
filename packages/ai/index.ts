@@ -1,6 +1,27 @@
+/**
+ * @package @capstack/ai
+ *
+ * AI / LLM integration stubs for the Capstack platform.
+ *
+ * STATUS: STUB — all functions return placeholder data.
+ *   Wire up to a real LLM provider when ready.
+ *
+ * PLANNED INTEGRATIONS:
+ *   - OpenAI GPT-4o (credit narrative generation, document summarisation)
+ *   - Anthropic Claude (complex reasoning, compliance explanations)
+ *   - Vercel AI SDK (streaming responses to the front-end)
+ *
+ * HOW TO WIRE UP (example with OpenAI):
+ *   1. pnpm add openai --filter @capstack/ai
+ *   2. Add OPENAI_API_KEY to the relevant .env file
+ *   3. Replace the stub body in generateCreditNarrative() with real API calls
+ *
+ * AGENT RUNS:
+ *   The database has an AgentRun table for auditing all LLM calls.
+ *   When implementing, persist each call via @capstack/db prisma.agentRun.create().
+ */
+
 // ─── LLM / AI Stubs ───────────────────────────────────────────────────────────
-// Placeholder interfaces and stubs for AI/LLM integrations.
-// Wire up to OpenAI, Anthropic, or local models in future.
 
 export interface CreditNarrativeInput {
   borrowerId: string;

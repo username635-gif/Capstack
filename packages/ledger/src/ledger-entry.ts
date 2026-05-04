@@ -1,3 +1,39 @@
+/**
+ * Double-Entry Ledger Primitives
+ *
+ * OVERVIEW:
+ *   Every financial movement in Capstack is recorded as a balanced
+ *   double-entry transaction: for every debit there must be an equal credit.
+ *   This matches standard accounting (GAAP / IFRS) and prevents money
+ *   from being created or destroyed by code bugs.
+ *
+ * KEY CONCEPTS:
+ *   DEBIT  — increases asset/expense accounts; decreases liability/equity accounts.
+ *   CREDIT — increases liability/equity/revenue accounts; decreases asset accounts.
+ *
+ * ACCOUNTS USED IN CAPSTACK (examples):
+ *   LOAN_RECEIVABLE      — asset: we are owed this money
+ *   BANK_ACCOUNT         — asset: cash held
+ *   FUNDING_LIABILITY    — liability: money owed to warehouse/investor
+ *   INTEREST_INCOME      — revenue
+ *   ORIGINATION_FEE_INCOME — revenue
+ *
+ * FLOW FOR LOAN DISBURSEMENT:
+ *   DR LOAN_RECEIVABLE   5,000.00
+ *   CR BANK_ACCOUNT               5,000.00
+ *
+ * FLOW FOR REPAYMENT:
+ *   DR BANK_ACCOUNT      5,600.00
+ *   CR LOAN_RECEIVABLE            5,000.00
+ *   CR INTEREST_INCOME              600.00
+ *
+ * TODO (next developer):
+ *   - Wire TransactionBuilder.build() to persist entries via @capstack/db
+ *   - Add accountId validation against the LedgerAccount table
+ *   - Replace the in-memory sequence counter with a proper UUID generator
+ *   - Add currency validation across entries in the same transaction
+ */
+
 import { Money } from './money';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

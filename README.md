@@ -1,159 +1,140 @@
-# Turborepo starter
+# Capstack
 
-This Turborepo starter is maintained by the Turborepo core team.
+A full-stack lending-as-a-service (LaaS) monorepo built with Turborepo, Next.js, Prisma, and Neon (serverless Postgres).
 
-## Using this example
+Capstack provides the infrastructure for originating, servicing, and collecting on consumer and SME loans — including credit decisioning, KYC/AML, open banking, and double-entry ledger accounting.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## Architecture
+
+```
+apps/
+  api/        → REST API (Next.js App Router, port 3000)
+  borrower/   → Borrower-facing portal (port 3001)
+  ops/        → Internal operations dashboard (port 3002)
+  partner/    → Lending partner portal (port 3003)
+  workers/    → Background job runner (BullMQ / Inngest — coming soon)
+
+packages/
+  db/           → Prisma client singleton + Neon adapter
+  ledger/       → Money (bigint cents) + double-entry bookkeeping primitives
+  pricing/      → Loan amortization schedule calculators (PMT, bullet)
+  ai/           → LLM/AI stubs (OpenAI, Anthropic — coming soon)
+  kyc/          → KYC/AML stubs (Onfido — coming soon)
+  integrations/ → Open banking + payment stubs (Stitch, Stripe — coming soon)
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## Prerequisites
 
-### Apps and Packages
+- [Node.js](https://nodejs.org/) ≥ 20
+- [pnpm](https://pnpm.io/) ≥ 9
+- [Neon](https://neon.tech/) database (serverless Postgres)
+- [Upstash Redis](https://upstash.com/) (for idempotency caching)
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+---
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Getting started
 
 ```sh
-cd my-turborepo
-turbo build
+# 1. Install dependencies
+pnpm install
+
+# 2. Set up environment variables (see below)
+
+# 3. Generate the Prisma client
+pnpm --filter @capstack/db generate
+
+# 4. Push the schema to your Neon database
+pnpm --filter @capstack/db exec prisma db push
+
+# 5. Start all apps in development mode
+pnpm dev
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+## Environment variables
+
+Create `apps/api/.env.local` with the following:
+
+```env
+# Neon PostgreSQL (serverless)
+DATABASE_URL="postgresql://user:password@ep-xxx.neon.tech/capstack?sslmode=require"
+
+# Upstash Redis (for idempotency key caching)
+UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your-token"
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Developer commands
 
-```sh
-turbo build --filter=docs
-```
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start all apps (hot reload) |
+| `pnpm build` | Build all apps and packages |
+| `pnpm --filter api dev` | Start only the API on port 3000 |
+| `pnpm --filter borrower dev` | Start only the borrower portal on port 3001 |
+| `pnpm --filter ops dev` | Start only the ops dashboard on port 3002 |
+| `pnpm --filter partner dev` | Start only the partner portal on port 3003 |
+| `pnpm --filter @capstack/db studio` | Open Prisma Studio (database GUI) |
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Key API endpoints
 
-### Develop
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/applications` | Submit a loan application (idempotent) |
 
-To develop all apps and packages, run the following command:
+Pass an `idempotency-key` header (UUID) on write requests. Duplicate requests within 24 hours return the cached response with `X-Idempotent: true`.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+---
 
-```sh
-cd my-turborepo
-turbo dev
-```
+## Packages
 
-Without global `turbo`, use your package manager:
+### `@capstack/db`
+Prisma client configured with the Neon serverless adapter (`@prisma/adapter-neon`). Exports a global singleton `prisma` that is safe to use in Next.js with hot reload.
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+### `@capstack/ledger`
+- **`Money`** — floating-point-safe currency class backed by bigint cents. Never use raw `number` for monetary values.
+- **`TransactionBuilder`** — fluent API for constructing balanced double-entry ledger transactions. All transactions must have equal total debits and credits (enforced by `validateTransaction()`).
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### `@capstack/pricing`
+- **`calculateAmortizationSchedule()`** — routes to the correct calculator based on `method` (`EQUAL_INSTALLMENT` or `BULLET`).
+- All inputs use cents and basis points (bps) to avoid floating-point issues.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+---
 
-```sh
-turbo dev --filter=web
-```
+## Tech stack
 
-Without global `turbo`:
+| Layer | Technology |
+|---|---|
+| Monorepo | Turborepo + pnpm workspaces |
+| Framework | Next.js 15 (App Router, Turbopack) |
+| Language | TypeScript (strict) |
+| Database | Neon (serverless Postgres) via Prisma v7 |
+| Cache / Queue | Upstash Redis |
+| Styling | Tailwind CSS |
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+---
 
-### Remote Caching
+## Roadmap
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+- [ ] KYC integration (Onfido)
+- [ ] Open banking / bank account linking (Stitch)
+- [ ] Payment collection (Stripe / DebiCheck)
+- [ ] AI-powered credit narrative (OpenAI GPT-4o)
+- [ ] Background job queues (BullMQ / Inngest)
+- [ ] Authentication (Clerk / NextAuth)
+- [ ] Multi-tenant lender isolation
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+---
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## Contributing
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This is a private monorepo. Please follow the notes in each package's source files before making changes. Run `pnpm build` before committing to verify there are no TypeScript errors.
