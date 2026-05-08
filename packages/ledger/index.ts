@@ -30,3 +30,13 @@
 export { Money } from './src/money';
 export { validateTransaction, TransactionBuilder } from './src/ledger-entry';
 export type { LedgerEntry, LedgerTransaction, EntryType } from './src/ledger-entry';
+
+// ── Servicing modules ─────────────────────────────────────────────────────────
+export { generateSchedule } from './src/amortization';
+export type { LedgerScheduleEntry, LedgerSchedule } from './src/amortization';
+export { accrueDaily, daysInYear } from './src/accrual';
+export type { AccrualResult } from './src/accrual';
+export { allocatePayment, totalOutstanding } from './src/payment-allocation';
+export type { OutstandingBalance, AllocationResult } from './src/payment-allocation';
+export { computeEcl } from './src/ifrs9';
+

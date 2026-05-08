@@ -10,8 +10,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capstack/ai": "workspace:^",
     "@capstack/db": "workspace:*",
-    "@capstack/ledger": "workspace:*"
+    "@capstack/integrations": "workspace:^",
+    "@capstack/ledger": "workspace:*",
+    "@capstack/pricing": "workspace:^",
+    "inngest": "^4.3.0"
   },
   "devDependencies": {
     "@types/node": "^20",

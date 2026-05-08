@@ -4,11 +4,19 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:borrower": "turbo run dev --filter=api --filter=borrower",
+    "dev:ops": "turbo run dev --filter=api --filter=ops",
+    "dev:partner": "turbo run dev --filter=api --filter=partner",
+    "dev:all": "turbo run dev",
+    "kill-ports": "npx kill-port 3000 3001 3002 3003",
+    "dev:clean": "pnpm kill-ports && turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "kill-port": "^2.0.1",
     "prettier": "^3.7.4",
     "turbo": "^2.9.8",
     "typescript": "5.9.2"

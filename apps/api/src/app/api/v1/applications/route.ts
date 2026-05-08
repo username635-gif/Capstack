@@ -36,6 +36,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
+import { inngest } from '@/lib/inngest';
 
 const IDEMPOTENCY_TTL = 60 * 60 * 24; // 24 hours — matches typical session length
 
@@ -130,5 +131,40 @@ export async function POST(req: NextRequest) {
     await redis.set(`idempotency:${idempotencyKey}`, responseBody, { ex: IDEMPOTENCY_TTL });
   }
 
+  // Fire underwriting event (non-blocking — workers service picks this up)
+  await inngest.send({ name: 'application/created', data: { applicationId: application!.id } }).catch(() => {
+    // Fail silently — event will be retried or triggered manually if Inngest isn't running
+  });
+
   return NextResponse.json(responseBody, { status: 201 });
+}
+
+export async function GET(req: NextRequest) {
+  const { prisma } = await import('@capstack/db');
+  const { searchParams } = new URL(req.url);
+  const status    = searchParams.get('status') ?? undefined;
+  const borrowerId = searchParams.get('borrowerId') ?? undefined;
+  const take      = Math.min(Number(searchParams.get('limit') ?? 20), 100);
+  const skip      = Number(searchParams.get('offset') ?? 0);
+
+  const [err, applications] = await to(
+    prisma.application.findMany({
+      where: { ...(status && { status: status as import('@capstack/db').ApplicationStatus }), ...(borrowerId && { borrowerId }) },
+      include: { borrower: { include: { individual: true, business: true } }, product: true, decisions: { orderBy: { createdAt: 'desc' }, take: 1 } },
+      orderBy: { submittedAt: 'desc' },
+      take,
+      skip,
+    }),
+  );
+  if (err) return NextResponse.json({ error: err.message }, { status: 500 });
+
+  const data = applications!.map(a => ({
+    ...a,
+    amountRequested: Number(a.amountRequested),
+    latestDecision: a.decisions[0] ? {
+      ...a.decisions[0],
+      approvedAmount: a.decisions[0].approvedAmount ? Number(a.decisions[0].approvedAmount) : null,
+    } : null,
+  }));
+  return NextResponse.json({ data, count: data.length });
 }

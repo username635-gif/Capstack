@@ -32,19 +32,25 @@
  *   4. Register queues in this file
  */
 
-console.log('[workers] Starting Capstack worker process...');
+import { createServer } from 'http';
+import { serve } from 'inngest/node';
+import { inngest } from './inngest/client';
+import { dailyAccrual } from './jobs/daily-accrual';
+import { updateDelinquency } from './jobs/update-delinquency';
+import { underwriteApplication } from './inngest/functions/underwrite';
 
-// Future: import and register queue handlers here
-// import { startCreditDecisionWorker } from './workers/creditDecision';
-// import { startDisbursementWorker } from './workers/disbursement';
-// import { startCollectionWorker } from './workers/collection';
-
-process.on('SIGTERM', () => {
-  console.log('[workers] Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
+const handler = serve({
+  client: inngest,
+  functions: [dailyAccrual, updateDelinquency, underwriteApplication],
 });
 
-process.on('SIGINT', () => {
-  console.log('[workers] Received SIGINT, shutting down gracefully...');
-  process.exit(0);
+const PORT = Number(process.env.WORKERS_PORT ?? 3010);
+const server = createServer(handler);
+
+server.listen(PORT, () => {
+  console.log(`[workers] Ready — Inngest handler on http://localhost:${PORT}/api/inngest`);
+  console.log('[workers] Local dev: npx inngest-cli@latest dev -u http://localhost:3010/api/inngest');
 });
+
+process.on('SIGTERM', () => { server.close(); process.exit(0); });
+process.on('SIGINT',  () => { server.close(); process.exit(0); });

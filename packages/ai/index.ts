@@ -79,3 +79,9 @@ export async function runAgent(
     durationMs: 0,
   };
 }
+
+// ── Bank statement parser & collections agent ─────────────────────────────────
+export { parseBankStatement, reconcile } from './src/statement-parser';
+export type { ParsedStatement, ParsedTransaction } from './src/statement-parser';
+export { collectionsAgent } from './src/collections-agent';
+

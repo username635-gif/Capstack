@@ -6,5 +6,8 @@
   "types": "index.ts",
   "scripts": {
     "test": "node test-money.js"
+  },
+  "dependencies": {
+    "@capstack/db": "workspace:^"
   }
 }

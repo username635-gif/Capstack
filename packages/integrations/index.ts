@@ -152,3 +152,8 @@ export async function createStripePayout(
     arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // T+2
   };
 }
+
+// ── Stitch mock (new) ─────────────────────────────────────────────────────────
+export { createLinkToken, fetchTransactions, stitchPayout } from './src/stitch';
+export type { StitchTransaction, StitchTransactionsResult, StitchPayoutResult } from './src/stitch';
+

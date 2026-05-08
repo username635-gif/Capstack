@@ -73,14 +73,17 @@ UPSTASH_REDIS_REST_TOKEN="your-token"
 
 ## Developer commands
 
+> **Note:** This monorepo runs multiple Next.js apps in parallel. To avoid high CPU usage, use the focused `dev:*` commands below during development — only start the apps you actually need.
+
 | Command | Description |
 |---|---|
-| `pnpm dev` | Start all apps (hot reload) |
+| `pnpm dev` | Start all apps with concurrency cap (safe default) |
+| `pnpm dev:api` | API only (port 3000) — lightest option |
+| `pnpm dev:borrower` | API + borrower portal (ports 3000, 3001) |
+| `pnpm dev:ops` | API + ops dashboard (ports 3000, 3002) |
+| `pnpm dev:partner` | API + partner portal (ports 3000, 3003) |
+| `pnpm dev:all` | All apps at once — only use on capable hardware |
 | `pnpm build` | Build all apps and packages |
-| `pnpm --filter api dev` | Start only the API on port 3000 |
-| `pnpm --filter borrower dev` | Start only the borrower portal on port 3001 |
-| `pnpm --filter ops dev` | Start only the ops dashboard on port 3002 |
-| `pnpm --filter partner dev` | Start only the partner portal on port 3003 |
 | `pnpm --filter @capstack/db studio` | Open Prisma Studio (database GUI) |
 
 ---

@@ -33,3 +33,11 @@
  */
 export { calculateAmortizationSchedule, calculateEqualInstallment, calculateBullet } from './src/amortization';
 export type { AmortizationSchedule, AmortizationScheduleInput, ScheduledPayment, AmortizationMethod } from './src/amortization';
+
+// ── Underwriting modules ──────────────────────────────────────────────────────
+export { computeAffordability } from './src/affordability';
+export type { AffordabilityResult } from './src/affordability';
+export { evaluateRules, DEFAULT_POLICY_RULES } from './src/policy';
+export type { Rule, RuleType, PolicyResult } from './src/policy';
+export { getAprByRiskBand, classifyRiskBand } from './src/pricing';
+

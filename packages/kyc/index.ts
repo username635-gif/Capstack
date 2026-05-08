@@ -109,3 +109,10 @@ export async function runAmlCheck(
     createdAt: new Date(),
   };
 }
+
+// ── Onfido & sanctions implementations ───────────────────────────────────────
+export { createApplicant, generateSdkToken, retrieveCheck } from './src/onfido';
+export type { OnfidoApplicant, OnfidoCheck } from './src/onfido';
+export { checkSanctions } from './src/sanctions';
+export type { SanctionsResult } from './src/sanctions';
+
