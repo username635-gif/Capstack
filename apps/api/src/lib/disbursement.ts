@@ -1,6 +1,23 @@
 /**
  * Multi-rail disbursement — tries PayFast first, falls back to Stitch mock.
  *
+ * DISBURSEMENT FLOW:
+ *   1. Loan is approved (CreditDecision.recommendation = 'APPROVE')
+ *   2. Ops agent or auto-approval triggers POST /api/v1/loans/disburse
+ *   3. This module attempts PayFast payout first (primary rail)
+ *   4. If PayFast fails (network error, insufficient funds, etc.), it retries
+ *      via the Stitch open-banking mock (secondary rail)
+ *   5. A Disbursement record is written to the database either way
+ *   6. The loan status moves from APPROVED → ACTIVE
+ *
+ * RAILS:
+ *   PAYFAST — real-money bank transfer in production; sandbox mock in dev
+ *   STITCH  — open-banking real-time payment; currently a mock stub
+ *
+ * AMOUNTS:
+ *   amountRand is in South African Rands (e.g. 5000.00 for R5 000).
+ *   The Loan record stores amounts in cents as BigInt — convert before calling this.
+ *
  * Patterns applied:
  *   1. Early return — validate inputs
  *   6. to() helper — error as value (avoid try/catch pyramid)

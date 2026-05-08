@@ -1,6 +1,24 @@
 /**
  * Bank statement parser — deterministic regex-first approach with an LLM fallback.
  *
+ * STRATEGY:
+ *   1. Extract raw text from the PDF using pdf-parse
+ *   2. Try the deterministic SA bank regex parser first (fast, free, accurate for standard formats)
+ *   3. If regex finds fewer than 2 transactions, fall back to the LLM stub
+ *      (replace stub with real OpenAI/Anthropic call when API keys are provisioned)
+ *
+ * TO INTEGRATE REAL LLM:
+ *   In llmFallback(), call the OpenAI API:
+ *     const response = await openai.chat.completions.create({
+ *       model: 'gpt-4o',
+ *       messages: [{ role: 'user', content: `Parse this bank statement JSON...\n${pdfText}` }]
+ *     });
+ *   Then parse the JSON from the response and map to ParsedStatement shape.
+ *
+ * SUPPORTED SA BANK FORMATS (regex parser):
+ *   Standard Bank, FNB, Absa, Nedbank — all use similar date + description + amount + Cr/Dr format.
+ *   Capitec uses a slightly different format; the regex may miss some rows — LLM handles it.
+ *
  * Patterns applied:
  *   1. Early return — skip LLM if regex already found transactions
  *   3. Optional chaining + nullish coalescing — safe regex group access
@@ -64,8 +82,9 @@ function deterministicParse(text: string): ParsedStatement {
   return { openingBalance, closingBalance, transactions };
 }
 
-// ─── LLM fallback (stub — replace with OpenAI/Claude call) ───────────────────
-
+// ─── LLM fallback (stub — replace with OpenAI/Claude call when keys are set) ───
+// This is called only if the regex parser returns fewer than 2 transactions,
+// which typically indicates a Capitec or non-standard bank format.
 async function llmFallback(_pdfBuffer: Buffer): Promise<ParsedStatement> {
   // TODO: call LLM API, return structured JSON
   return {

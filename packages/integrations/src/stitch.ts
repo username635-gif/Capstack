@@ -2,6 +2,22 @@
  * Stitch Open Banking — mock implementation.
  * Replace with real @stitch-money/node-sdk calls when credentials are ready.
  *
+ * WHAT STITCH DOES:
+ *   Stitch is a South African open banking provider. It lets Capstack:
+ *   1. Read 90 days of bank transactions for bank statement analysis (affordability)
+ *   2. Initiate real-time account-to-account payouts (faster than PayFast for some banks)
+ *   3. Verify account ownership without manual upload
+ *
+ * PRODUCTION INTEGRATION STEPS:
+ *   1. Create account at https://stitch.money and get client credentials
+ *   2. Set env: STITCH_CLIENT_ID, STITCH_CLIENT_SECRET
+ *   3. Replace createLinkToken() with the real Stitch OAuth link flow
+ *   4. Replace fetchTransactions() with real GraphQL query to Stitch's API
+ *   5. Replace stitchPayout() with real PaymentInitiation mutation
+ *
+ * The mock currently returns 4 fixture transactions (salary + rent + groceries + airtime).
+ * This is enough data for the bank statement parser to run in demo mode.
+ *
  * Patterns applied:
  *   1. Early return — functions return deterministically without nested logic
  *   3. Optional chaining + nullish coalescing — default for optional params

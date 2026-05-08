@@ -2,8 +2,28 @@
  * PayFast sandbox HTTP client.
  *
  * PayFast does not publish an official Node SDK, so this module wraps
- * the REST sandbox API directly.  Set PAYFAST_TESTING_MODE="true" to
- * target the sandbox environment.
+ * the REST sandbox API directly.
+ *
+ * ENVIRONMENT VARIABLES (set in apps/api/.env.local):
+ *   PAYFAST_MERCHANT_ID    — from PayFast dashboard
+ *   PAYFAST_MERCHANT_KEY   — from PayFast dashboard
+ *   PAYFAST_PASSPHRASE     — set in PayFast dashboard security settings
+ *   PAYFAST_TESTING_MODE   — set to "true" for sandbox; omit or "false" for live
+ *
+ * HOW IT WORKS:
+ *   payout.create()       — disburses loan proceeds to borrower's bank account
+ *   tokenization.create() — tokenises a debit card for recurring repayments
+ *   itn.verify()          — validates the HMAC on ITN (payment notification) webhooks
+ *
+ * SANDBOX BEHAVIOUR:
+ *   When PAYFAST_TESTING_MODE=true, HTTP calls are skipped and deterministic
+ *   mock responses are returned. This allows full end-to-end demo without real money.
+ *   The mock payout ID is formatted: pf_payout_<reference>_<timestamp>
+ *
+ * ITN WEBHOOK FLOW:
+ *   PayFast POSTs to /api/webhooks/payfast when a payment completes.
+ *   The handler verifies the signature, records a LoanRepayment, and
+ *   decrements the loan's outstandingPrincipal.
  *
  * Patterns applied:
  *   1. Early return — validate config immediately

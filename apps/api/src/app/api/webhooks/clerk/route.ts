@@ -42,12 +42,15 @@ export async function POST(req: Request) {
   const payload = await req.text();
   const hdrs    = await headers();
 
+  // Svix is the webhook delivery service Clerk uses. Every Clerk webhook request
+  // includes three headers that together form the HMAC verification envelope.
   // Pattern 3 — optional chaining for header access
   const svixId        = hdrs.get('svix-id')        ?? '';
   const svixTimestamp = hdrs.get('svix-timestamp')  ?? '';
   const svixSignature = hdrs.get('svix-signature')  ?? '';
 
   // Pattern 1 — early return on missing svix headers
+  // This prevents spoofed requests from non-Clerk sources being processed
   if (!svixId || !svixTimestamp || !svixSignature) {
     return new Response('Missing svix headers', { status: 400 });
   }
