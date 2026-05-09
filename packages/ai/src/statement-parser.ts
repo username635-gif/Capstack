@@ -28,7 +28,7 @@
  *   8. Pipe-like composition — parse → reconcile as distinct pure functions
  */
 
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ function deterministicParse(text: string): ParsedStatement {
 // ─── LLM fallback (stub — replace with OpenAI/Claude call when keys are set) ───
 // This is called only if the regex parser returns fewer than 2 transactions,
 // which typically indicates a Capitec or non-standard bank format.
-async function llmFallback(_pdfBuffer: Buffer): Promise<ParsedStatement> {
+async function llmFallback(_pdfBuffer: Uint8Array): Promise<ParsedStatement> {
   // TODO: call LLM API, return structured JSON
   return {
     openingBalance: 1000,
@@ -100,13 +100,14 @@ async function llmFallback(_pdfBuffer: Buffer): Promise<ParsedStatement> {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function parseBankStatement(pdfBuffer: Buffer): Promise<ParsedStatement> {
-  const [err, data] = await to(pdfParse(pdfBuffer));
+export async function parseBankStatement(pdfBuffer: Uint8Array): Promise<ParsedStatement> {
+  const parser = new PDFParse({ data: pdfBuffer });
+  const [err, result] = await to(parser.getText());
 
   // Pattern 1 — early return on parse failure
-  if (err || !data) return llmFallback(pdfBuffer);
+  if (err || !result) return llmFallback(pdfBuffer);
 
-  const parsed = deterministicParse(data.text);
+  const parsed = deterministicParse(result.text);
 
   // Pattern 1 — early return: use deterministic result if transactions found
   if (parsed.transactions.length > 0) return parsed;

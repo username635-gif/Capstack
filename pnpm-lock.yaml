@@ -239,6 +239,9 @@ importers:
         specifier: ^2.4.5
         version: 2.4.5
     devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
       '@types/pdf-parse':
         specifier: ^1.1.5
         version: 1.1.5
