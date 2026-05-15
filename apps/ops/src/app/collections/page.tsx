@@ -64,7 +64,7 @@ export default function CollectionsPage() {
       {!loading && !error && (
         data.length === 0 ? (
           <div className="rounded-xl p-10 text-center" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>No loans in arrears for the selected filter. 🎉</p>
+            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>No loans in arrears for the selected filter.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
