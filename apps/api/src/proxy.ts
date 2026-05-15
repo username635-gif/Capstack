@@ -1,19 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// ── CORS helpers ─────────────────────────────────────────────────────────────
+const STATIC_ORIGINS = [
+  'https://borrower-lac.vercel.app',
+  'https://capstack-ops.vercel.app',
+  'https://capstack-partner.vercel.app',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (STATIC_ORIGINS.includes(origin)) return true;
+  if (origin.endsWith('.vercel.app')) return true;
+  const extra = (process.env.CORS_EXTRA_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  return extra.includes(origin);
+}
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, x-api-key, x-capstack-sandbox, idempotency-key',
+  'Access-Control-Max-Age': '86400',
+};
+
 /**
- * Next.js 16 proxy — applied to all /api/v1/* routes.
+ * Next.js 16 proxy — applied to all /api/* routes.
  *
+ * Handles CORS preflight and headers for all routes.
  * Enforces rate limiting and API key auth when environment variables are set.
  * DEMO MODE: When env vars are missing all checks pass through.
- *
- * Note: Edge Runtime only supports Web APIs. Heavy checks (Prisma, crypto)
- * are handled inside individual route handlers instead.
  */
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const origin = req.headers.get('origin') ?? '';
+  const allowed = isAllowedOrigin(origin);
 
-  // Only guard v1 API routes
-  if (!pathname.startsWith('/api/v1')) return NextResponse.next();
+  // Handle CORS preflight for all API routes
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': allowed ? origin : '',
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // Only apply rate limiting / API key checks to v1 routes
+  if (!pathname.startsWith('/api/v1')) {
+    const res = NextResponse.next();
+    if (allowed) {
+      res.headers.set('Access-Control-Allow-Origin', origin);
+      res.headers.set('Access-Control-Allow-Methods', CORS_HEADERS['Access-Control-Allow-Methods']);
+      res.headers.set('Access-Control-Allow-Headers', CORS_HEADERS['Access-Control-Allow-Headers']);
+    }
+    return res;
+  }
 
   // ── Rate limiting (skip gracefully if Redis env not configured) ──────────
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
@@ -63,9 +106,15 @@ export async function proxy(req: NextRequest) {
     return NextResponse.json({ error: 'Malformed API key' }, { status: 401 });
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  if (allowed) {
+    res.headers.set('Access-Control-Allow-Origin', origin);
+    res.headers.set('Access-Control-Allow-Methods', CORS_HEADERS['Access-Control-Allow-Methods']);
+    res.headers.set('Access-Control-Allow-Headers', CORS_HEADERS['Access-Control-Allow-Headers']);
+  }
+  return res;
 }
 
 export const config = {
-  matcher: ['/api/v1/:path*'],
+  matcher: ['/api/:path*'],
 };
