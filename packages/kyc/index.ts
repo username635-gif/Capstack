@@ -124,3 +124,11 @@ export type { BusinessInput, DirectorInput, KybResult, KybStatus } from './src/k
 export { submitSmileJob, validateSaIdNumber, runLivenessCheck } from './src/smile-id';
 export type { SmileJobInput, SmileJobResult, SmileJobType, SmileJobStatus } from './src/smile-id';
 
+// ── Credit bureau soft pull ───────────────────────────────────────────────────
+export { performSoftPull, getBureauScore } from './src/credit-bureau';
+export type { SoftPullInput, SoftPullResult, BureauScoreResult } from './src/credit-bureau';
+
+// ── Address verification ──────────────────────────────────────────────────────
+export { verifyAddress, verifyAddressFromDocument } from './src/address-verification';
+export type { AddressInput, AddressVerificationResult } from './src/address-verification';
+

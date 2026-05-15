@@ -107,6 +107,10 @@ export async function POST(req: NextRequest) {
   // Demo mode — return a stub application without touching the DB
   if (DEMO_MODE) {
     const now = new Date().toISOString();
+    const demoAprBps = 1800; // 18% demo APR
+    const demoTermYears = termDaysRequested / 365;
+    const demoInterestRand = (requestedAmount / 100) * (demoAprBps / 10000) * demoTermYears;
+    const demoFeeRand = 0;
     const demoApp = {
       id:                `demo_app_${Math.random().toString(36).slice(2, 10)}`,
       borrowerId,
@@ -120,6 +124,13 @@ export async function POST(req: NextRequest) {
       submittedAt:       now,
       createdAt:         now,
       updatedAt:         now,
+      ncrDisclosure: {
+        annualPercentageRatePct: demoAprBps / 100,
+        initiationFeeRand:       demoFeeRand,
+        estimatedTotalInterestRand: Number(demoInterestRand.toFixed(2)),
+        totalCostOfCreditRand:   Number(((requestedAmount / 100) + demoInterestRand + demoFeeRand).toFixed(2)),
+        disclaimer:              'Estimate only. Final figures confirmed at approval per NCA s.92.',
+      },
     };
     if (idempotencyKey) {
       await redis.set(`idempotency:${idempotencyKey}`, demoApp, { ex: IDEMPOTENCY_TTL }).catch(() => {});
@@ -143,13 +154,40 @@ export async function POST(req: NextRequest) {
         externalRef,  // Pattern 7 — shorthand
         status: 'SUBMITTED',
       },
+      include: { product: true },
     })
   );
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 422 });
 
   // Pattern 7 — property shorthand: name the transformed value to match the key name
   const amountRequested = Number(application!.amountRequested);
-  const responseBody = { ...application!, amountRequested };
+
+  // ── NCR s.92 disclosure — must accompany every credit offer ──────────
+  // Compute an upfront estimate so borrowers can compare products before full
+  // underwriting. The exact figures are confirmed when the loan is approved.
+  const product = application!.product;
+  const aprBps          = product?.defaultAprBps ?? 1800;          // default 18 % if no product
+  const fixedFeeAmtCents = Number(product?.fixedFeeAmount ?? 0);
+  const feePctBps       = product?.feePctBps ?? 0;
+  const aprPct          = aprBps / 100;                            // 1800 → 18.00
+  const termYears       = termDaysRequested / 365;
+  const principalRand   = requestedAmount / 100;                   // cents → rands
+  const initiationFeeRand =
+    fixedFeeAmtCents > 0
+      ? fixedFeeAmtCents / 100
+      : (feePctBps / 10000) * principalRand;                       // pct-based fallback
+  const estimatedTotalInterestRand = principalRand * (aprBps / 10000) * termYears;
+  const totalCostOfCreditRand      = principalRand + estimatedTotalInterestRand + initiationFeeRand;
+
+  const ncrDisclosure = {
+    annualPercentageRatePct:      Number(aprPct.toFixed(2)),
+    initiationFeeRand:            Number(initiationFeeRand.toFixed(2)),
+    estimatedTotalInterestRand:   Number(estimatedTotalInterestRand.toFixed(2)),
+    totalCostOfCreditRand:        Number(totalCostOfCreditRand.toFixed(2)),
+    disclaimer:                   'Estimate only. Final figures confirmed at approval per NCA s.92.',
+  };
+
+  const responseBody = { ...application!, amountRequested, ncrDisclosure };
 
   // Cache the response for idempotency
   if (idempotencyKey) {

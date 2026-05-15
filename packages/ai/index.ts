@@ -100,3 +100,7 @@ export type {
   OnboardingData,
 } from './src/onboarding-agent';
 
+// ── Fraud detection ───────────────────────────────────────────────────────────
+export { detectFraud } from './src/fraud-detector';
+export type { FraudCheckInput, FraudCheckResult, FraudSignal } from './src/fraud-detector';
+

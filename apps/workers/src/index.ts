@@ -38,10 +38,20 @@ import { inngest } from './inngest/client';
 import { dailyAccrual } from './jobs/daily-accrual';
 import { updateDelinquency } from './jobs/update-delinquency';
 import { underwriteApplication } from './inngest/functions/underwrite';
+import { paymentReminders } from './jobs/payment-reminders';
+import { retryFailedPayments } from './jobs/retry-payments';
+import { retryWebhooks } from './jobs/retry-webhooks';
 
 const handler = serve({
   client: inngest,
-  functions: [dailyAccrual, updateDelinquency, underwriteApplication],
+  functions: [
+    dailyAccrual,
+    updateDelinquency,
+    underwriteApplication,
+    paymentReminders,
+    retryFailedPayments,
+    retryWebhooks,
+  ],
 });
 
 const PORT = Number(process.env.WORKERS_PORT ?? 3010);

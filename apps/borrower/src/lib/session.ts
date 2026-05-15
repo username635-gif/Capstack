@@ -30,8 +30,10 @@ export function getSession(): BorrowerSession | null {
 
 export function setSession(s: BorrowerSession): void {
   localStorage.setItem(KEY, JSON.stringify(s));
-  // Cookie flag read by middleware to protect routes server-side
-  document.cookie = `capstack_auth=1; path=/; max-age=86400; SameSite=Lax`;
+  // Cookie value = ms-since-epoch so middleware can enforce a hard session timeout
+  // without needing a server-side session store.
+  const issuedAt = Date.now();
+  document.cookie = `capstack_auth=${issuedAt}; path=/; max-age=86400; SameSite=Lax`;
 }
 
 export function clearSession(): void {
