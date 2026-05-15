@@ -118,7 +118,7 @@ export async function GET(
 
   if (format === 'pdf') {
     const pdfBuffer = await renderTransactionHistory(data);
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `attachment; filename="transactions_${borrowerId}.pdf"`,

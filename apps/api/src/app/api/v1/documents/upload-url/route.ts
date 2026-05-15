@@ -17,15 +17,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { prisma } from '@capstack/db';
+import { getR2Env } from '@/lib/env';
 
-const r2 = new S3Client({
-  region: 'auto',
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId:     process.env.R2_ACCESS_KEY     ?? '',
-    secretAccessKey: process.env.R2_SECRET_KEY     ?? '',
-  },
-});
+function createR2Client() {
+  const r2Env = getR2Env();
+
+  return {
+    client: new S3Client({
+      region: 'auto',
+      endpoint: r2Env.endpoint,
+      credentials: {
+        accessKeyId: r2Env.accessKeyId,
+        secretAccessKey: r2Env.secretAccessKey,
+      },
+    }),
+    bucket: r2Env.bucket,
+  };
+}
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
@@ -49,12 +57,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing borrowerId, fileName or fileType' }, { status: 400 });
   }
 
-  const key    = `borrowers/${borrowerId}/${Date.now()}-${fileName}`;
-  const Bucket = process.env.R2_BUCKET ?? 'capstack-documents';
+  const key = `borrowers/${borrowerId}/${Date.now()}-${fileName}`;
 
-  const command = new PutObjectCommand({ Bucket, Key: key, ContentType: fileType });
+  let r2: ReturnType<typeof createR2Client>;
+  try {
+    r2 = createR2Client();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Document storage is not configured';
+    console.error('[upload-url] configuration failed:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
-  const [signErr, url] = await to(getSignedUrl(r2, command, { expiresIn: 3600 }));
+  const command = new PutObjectCommand({ Bucket: r2.bucket, Key: key, ContentType: fileType });
+
+  const [signErr, url] = await to(getSignedUrl(r2.client, command, { expiresIn: 3600 }));
 
   // Pattern 1 — early return on signing failure
   if (signErr) {

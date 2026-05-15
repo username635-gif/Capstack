@@ -43,10 +43,15 @@ export async function GET(
             kycChecks:  { orderBy: { createdAt: 'desc' } },
           },
         },
-        product:       true,
-        decisions:     { orderBy: { createdAt: 'desc' }, take: 1, include: { decidedBy: true } },
-        repayments:    { orderBy: { receivedAt: 'asc' } },
-        events:        { orderBy: { createdAt: 'desc' }, take: 20 },
+        product: true,
+        application: {
+          include: {
+            decisions: { orderBy: { createdAt: 'desc' }, take: 1, include: { decisionMaker: true } },
+            events: { orderBy: { createdAt: 'desc' }, take: 20 },
+          },
+        },
+        repayments: { orderBy: { receivedAt: 'asc' } },
+        collections: { orderBy: { createdAt: 'desc' }, take: 20 },
       },
     }),
   );
@@ -61,12 +66,26 @@ export async function GET(
     }),
   );
 
-  const latestDecision = loan.decisions[0] ?? null;
+  const latestDecision = loan.application?.decisions[0] ?? null;
   const principalRand  = Number(loan.principal) / 100;
   const aprPct         = loan.aprBps / 100;
   const initiationFeeRand = loan.product?.fixedFeeAmount ? Number(loan.product.fixedFeeAmount) / 100 : 0;
   const totalInterestRand = principalRand * (loan.aprBps / 10000) * (loan.termDays / 365);
   const totalCostRand  = principalRand + totalInterestRand + initiationFeeRand;
+  const combinedEvents = [
+    ...(loan.application?.events ?? []).map((event) => ({
+      type: event.type,
+      notes: (event.payload as { notes?: string })?.notes ?? '',
+      actorName: event.actor,
+      createdAt: event.createdAt,
+    })),
+    ...loan.collections.map((event) => ({
+      type: event.type,
+      notes: (event.payload as { notes?: string })?.notes ?? event.outcome ?? '',
+      actorName: event.channel ?? 'Collections',
+      createdAt: event.createdAt,
+    })),
+  ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
 
   const pdfBuffer = await renderOpsLoanRecord({
     generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -90,8 +109,8 @@ export async function GET(
       termDays:      loan.termDays,
       startDate:     loan.startDate.toISOString().slice(0, 10),
       maturityDate:  loan.maturityDate.toISOString().slice(0, 10),
-      dpd:           loan.dpd,
-      bucket:        loan.bucket,
+      dpd:           loan.daysPastDue,
+      bucket:        loan.delinquencyState,
     },
     decision: latestDecision
       ? {
@@ -111,10 +130,10 @@ export async function GET(
       initiationFeeRand:       initiationFeeRand.toFixed(2),
     },
     kycChecks: (loan.borrower?.kycChecks ?? []).map(k => ({
-      type:      k.checkType,
+      type:      k.type,
       status:    k.status,
       provider:  k.provider,
-      updatedAt: k.updatedAt.toISOString().slice(0, 10),
+      updatedAt: (k.completedAt ?? k.createdAt).toISOString().slice(0, 10),
     })),
     amlAlerts: (amlAlerts ?? []).map(a => ({
       type:      a.type,
@@ -127,17 +146,17 @@ export async function GET(
       date:       new Date(r.receivedAt).toISOString().slice(0, 10),
       amountRand: (Number(r.amount) / 100).toFixed(2),
       rail:       r.rail,
-      status:     r.status,
+      status:     'RECEIVED',
     })),
-    events: loan.events.map(e => ({
-      type:      e.type,
-      notes:     (e.metadata as { notes?: string })?.notes ?? '',
-      actorName: 'System',
-      createdAt: e.createdAt.toISOString().slice(0, 16).replace('T', ' '),
+    events: combinedEvents.map(event => ({
+      type:      event.type,
+      notes:     event.notes,
+      actorName: event.actorName,
+      createdAt: event.createdAt.toISOString().slice(0, 16).replace('T', ' '),
     })),
   });
 
-  return new Response(pdfBuffer, {
+  return new Response(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `attachment; filename="ops_loan_${loanId}.pdf"`,

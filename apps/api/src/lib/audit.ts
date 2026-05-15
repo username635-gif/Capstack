@@ -94,6 +94,14 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
     metadata,
   } = entry;
 
+  const afterPayload =
+    after !== undefined || metadata !== undefined
+      ? {
+          ...(after ?? {}),
+          ...(metadata !== undefined ? { _metadata: metadata } : {}),
+        }
+      : undefined;
+
   const [err] = await to(
     prisma.auditLog.create({
       data: {
@@ -103,9 +111,8 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
         resource,
         resourceId,
         before:   before   !== undefined ? (before as object) : undefined,
-        after:    after    !== undefined ? (after  as object) : undefined,
+        after:    afterPayload !== undefined ? (afterPayload as object) : undefined,
         ip:       ip       ?? null,
-        metadata: metadata ?? null,
       },
     }),
   );

@@ -4,7 +4,7 @@
  * PayFast does not publish an official Node SDK, so this module wraps
  * the REST sandbox API directly.
  *
- * ENVIRONMENT VARIABLES (set in apps/api/.env.local):
+ * ENVIRONMENT VARIABLES (set in root .env, app-local .env.local, or Vercel project env):
  *   PAYFAST_MERCHANT_ID    — from PayFast dashboard
  *   PAYFAST_MERCHANT_KEY   — from PayFast dashboard
  *   PAYFAST_PASSPHRASE     — set in PayFast dashboard security settings
@@ -31,6 +31,8 @@
  *   6. to() helper — surface errors as values
  *   7. Property shorthand
  */
+
+import { getPayfastEnv } from '@/lib/env';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,11 +82,8 @@ const LIVE_BASE     = 'https://www.payfast.co.za/eng/process';
 // ─── Client factory ───────────────────────────────────────────────────────────
 
 function createPayFastClient() {
-  const merchantId  = process.env.PAYFAST_MERCHANT_ID ?? '';
-  const merchantKey = process.env.PAYFAST_MERCHANT_KEY ?? '';
-  const passphrase  = process.env.PAYFAST_PASSPHRASE ?? '';
-  const testing     = process.env.PAYFAST_TESTING_MODE === 'true';
-  const baseUrl     = testing ? SANDBOX_BASE : LIVE_BASE;
+  const { merchantId, merchantKey, passphrase, testing } = getPayfastEnv();
+  const baseUrl = testing ? SANDBOX_BASE : LIVE_BASE;
 
   function authHeaders() {
     return {

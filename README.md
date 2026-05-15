@@ -58,16 +58,35 @@ pnpm dev
 
 ## Environment variables
 
-Create `apps/api/.env.local` with the following:
+The current checked-in root `.env` is intentionally minimal because only the core infrastructure is live today.
+Most third-party integrations in this repo are still stubs, demo fallbacks, or commented implementation hooks, so they do not require real credentials yet.
+
+Use `.env.example` as the master inventory of all environment variables currently referenced across the monorepo, including future API/provider slots.
+There are now per-app example files as well:
+
+- `apps/api/.env.example`
+- `apps/borrower/.env.example`
+- `apps/ops/.env.example`
+- `apps/partner/.env.example`
+- `apps/workers/.env.example`
+
+For local development:
 
 ```env
-# Neon PostgreSQL (serverless)
+# Minimum working local setup
 DATABASE_URL="postgresql://user:password@ep-xxx.neon.tech/capstack?sslmode=require"
-
-# Upstash Redis (for idempotency key caching)
 UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
 UPSTASH_REDIS_REST_TOKEN="your-token"
+NEXT_PUBLIC_API_URL="http://localhost:3000"
 ```
+
+Notes:
+
+- Root `.env` / shell vars: useful for shared packages, Prisma, and local scripts.
+- App-local `.env.local` files: still valid if you want per-app Next.js env management.
+- Vercel: set the same variables per deployed project (`api`, `borrower`, `ops`, `partner`) when you wire up real providers.
+- When the client gives you live API credentials, copy `.env.example` values into your actual env files and fill only the providers you are enabling.
+- Smile ID is currently stubbed in `packages/kyc`; without provider credentials it stays in demo/mock mode and does not activate a live biometric auth flow.
 
 ---
 

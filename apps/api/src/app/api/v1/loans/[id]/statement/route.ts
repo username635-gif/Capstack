@@ -199,7 +199,7 @@ export async function GET(
       schedule: statement.schedule,
     });
 
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `attachment; filename="statement_${loanId}.pdf"`,

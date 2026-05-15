@@ -28,6 +28,8 @@
  *   8. Composition — submitJob orchestrates the SmileIdentity pipeline
  */
 
+import { getSmileIdEnv } from './env';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SmileJobType =
@@ -82,12 +84,19 @@ export async function submitSmileJob(input: SmileJobInput): Promise<SmileJobResu
     throw new Error('submitSmileJob: borrowerId and countryCode are required');
   }
 
+  const smileEnv = getSmileIdEnv();
+
   // Production: call SmileIdentity SDK
   //   const SmileIdentity = require('@smileid/server-sdk');
   //   const connection     = new SmileIdentity(process.env.SMILE_ID_PARTNER_ID, process.env.SMILE_ID_API_KEY, process.env.SMILE_ID_SID_SERVER);
   //   const result = await connection.submit_job(partner_params, id_info, images, options);
 
-  const jobId = `smile_${input.borrowerId}_${Date.now()}`;
+  // Demo / stub mode: when Smile ID credentials are missing we intentionally
+  // return a deterministic success result so the borrower demo flow still works.
+  // No live biometric authentication is attempted until the provider is wired.
+  const partnerId = input.partnerId || smileEnv.partnerId;
+
+  const jobId = `smile_${partnerId || 'demo'}_${input.borrowerId}_${Date.now()}`;
 
   // Stub result — simulates a successful pass
   return {
@@ -121,7 +130,7 @@ export async function validateSaIdNumber(
   }
 
   return submitSmileJob({
-    partnerId:   process.env.SMILE_ID_PARTNER_ID ?? '',
+    partnerId:   getSmileIdEnv().partnerId,
     borrowerId,
     jobType:     'ID_API',
     idNumber,
@@ -139,7 +148,7 @@ export async function runLivenessCheck(
   countryCode = 'ZA',
 ): Promise<SmileJobResult> {
   return submitSmileJob({
-    partnerId:   process.env.SMILE_ID_PARTNER_ID ?? '',
+    partnerId:   getSmileIdEnv().partnerId,
     borrowerId,
     jobType:     'SMART_SELFIE_AUTHENTICATION',
     countryCode,

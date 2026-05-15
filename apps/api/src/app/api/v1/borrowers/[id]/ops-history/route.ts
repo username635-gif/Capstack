@@ -39,10 +39,14 @@ export async function GET(
         kycChecks:  { orderBy: { createdAt: 'desc' }, take: 1 },
         loans: {
           include: {
-            product:    true,
+            product: true,
+            application: {
+              include: {
+                decisions: { orderBy: { createdAt: 'desc' }, take: 1 },
+              },
+            },
             repayments: true,
-            events:     { where: { type: { startsWith: 'COLLECTION' } }, orderBy: { createdAt: 'desc' }, take: 10 },
-            decisions:  { orderBy: { createdAt: 'desc' }, take: 1 },
+            collections: { orderBy: { createdAt: 'desc' }, take: 10 },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -60,11 +64,11 @@ export async function GET(
   const totalDisbursed    = borrower.loans.reduce((s, l) => s + Number(l.principal), 0);
   const totalRepaid       = borrower.loans.flatMap(l => l.repayments).reduce((s, r) => s + Number(r.amount), 0);
   const totalOutstanding  = borrower.loans.reduce((s, l) => s + Number(l.outstandingPrincipal), 0);
-  const maxDpd            = borrower.loans.reduce((max, l) => Math.max(max, l.dpd), 0);
+  const maxDpd            = borrower.loans.reduce((max, l) => Math.max(max, l.daysPastDue), 0);
   const writtenOff        = borrower.loans.filter(l => l.status === 'WRITTEN_OFF').reduce((s, l) => s + Number(l.principal), 0);
   const currentBucket     = borrower.loans
     .filter(l => l.status === 'ACTIVE')
-    .sort((a, b) => b.dpd - a.dpd)[0]?.bucket ?? 'CURRENT';
+    .sort((a, b) => b.daysPastDue - a.daysPastDue)[0]?.delinquencyState ?? 'CURRENT';
   const kycStatus = borrower.kycChecks[0]?.status ?? 'PENDING';
 
   const pdfBuffer = await renderOpsBorrowerHistory({
@@ -102,13 +106,13 @@ export async function GET(
       maturityDate:     loan.maturityDate.toISOString().slice(0, 10),
       totalRepaidRand:  (loan.repayments.reduce((s, r) => s + Number(r.amount), 0) / 100).toFixed(2),
       outstandingRand:  (Number(loan.outstandingPrincipal) / 100).toFixed(2),
-      dpd:              loan.dpd,
-      bucket:           loan.bucket,
-      riskBand:         loan.decisions[0]?.riskBand ?? 'N/A',
-      collectionsEvents: loan.events.map(e => ({
+      dpd:              loan.daysPastDue,
+      bucket:           loan.delinquencyState,
+      riskBand:         loan.application?.decisions[0]?.riskBand ?? 'N/A',
+      collectionsEvents: loan.collections.map(e => ({
         date:    e.createdAt.toISOString().slice(0, 10),
         action:  e.type,
-        outcome: (e.metadata as { outcome?: string })?.outcome ?? '',
+        outcome: e.outcome ?? '',
       })),
     })),
     openFlags: [
@@ -125,7 +129,7 @@ export async function GET(
     ],
   });
 
-  return new Response(pdfBuffer, {
+  return new Response(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `attachment; filename="ops_borrower_${borrowerId}.pdf"`,
