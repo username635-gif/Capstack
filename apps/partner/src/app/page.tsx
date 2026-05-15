@@ -144,8 +144,4 @@ export default function PartnerHome() {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
