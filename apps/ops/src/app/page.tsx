@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link         from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LoanCalculator, CalculatorIcon, DocumentIcon } from '@/app/_components/LoanCalculator';
+import { LoanCalculator } from '@/app/_components/LoanCalculator';
 
 const stats = [
   { label: "Active loans", value: "1 284", delta: "+12 today" },
@@ -75,18 +75,36 @@ export default function OpsHome() {
         <div className="p-3 flex flex-col gap-1" style={{ borderTop: "1px solid var(--color-border)" }}>
           <button
             onClick={() => setCalcOpen(true)}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-left"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-left transition-colors"
             style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", cursor: "pointer" }}
           >
-            <CalculatorIcon size={15} color="var(--color-muted)" strokeWidth={1.4} />
+            {/* Calculator icon — inline so currentColor resolves correctly */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <rect x="7" y="5" width="10" height="4" rx="1" />
+              <circle cx="8"  cy="13"   r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="13"   r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="13"   r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="8"  cy="16.5" r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="16.5" r="0.8" fill="currentColor" stroke="none" />
+              <rect x="6.5" y="19" width="4" height="1.5" rx="0.75" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="19.75" r="0.8" fill="currentColor" stroke="none" />
+            </svg>
             Loan calculator
           </button>
           <a
             href="/downloads"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", textDecoration: "none" }}
           >
-            <DocumentIcon size={15} color="var(--color-muted)" strokeWidth={1.4} />
+            {/* Document icon — inline so currentColor resolves correctly */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="8" y1="13" x2="16" y2="13" />
+              <line x1="8" y1="17" x2="13" y2="17" />
+            </svg>
             Download reports
           </a>
         </div>
