@@ -19,7 +19,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         repayments:       { orderBy: { receivedAt: 'desc' }, take: 20 },
         disbursements:    true,
         collections:      { orderBy: { createdAt: 'desc' }, take: 10 },
-        restructureOffer: true,
       },
     }),
   );
