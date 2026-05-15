@@ -38,7 +38,7 @@ import { inngest } from './inngest/client';
 import { dailyAccrual } from './jobs/daily-accrual';
 import { updateDelinquency } from './jobs/update-delinquency';
 import { underwriteApplication } from './inngest/functions/underwrite';
-import { paymentReminders } from './jobs/payment-reminders';
+import { sendPaymentReminders } from './jobs/payment-reminders';
 import { retryFailedPayments } from './jobs/retry-payments';
 import { retryWebhooks } from './jobs/retry-webhooks';
 
@@ -48,7 +48,7 @@ const handler = serve({
     dailyAccrual,
     updateDelinquency,
     underwriteApplication,
-    paymentReminders,
+    sendPaymentReminders,
     retryFailedPayments,
     retryWebhooks,
   ],

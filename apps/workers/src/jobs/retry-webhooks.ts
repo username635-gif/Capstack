@@ -43,6 +43,12 @@ const MAX_WEBHOOK_ATTEMPTS = 5;
 // Backoff schedule in minutes after each failure
 const BACKOFF_MINUTES = [0, 5, 30, 120, 1440] as const;
 
+function _payloadObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 // Sign a webhook payload with HMAC-SHA256
 function _signPayload(payload: string, secret: string): string {
   return createHmac('sha256', secret).update(payload).digest('hex');
@@ -132,6 +138,7 @@ export const retryWebhooks = inngest.createFunction(
           attemptNo:    number;
           webhookData:  Record<string, unknown>;
         };
+        const existingPayload = _payloadObject(event.payload);
         const attemptNo     = (payload.attemptNo ?? 0) + 1;
         const webhookData   = payload.webhookData ?? {};
         const webhookUrl    = partner?.webhookUrl ?? '';
@@ -162,8 +169,8 @@ export const retryWebhooks = inngest.createFunction(
           await prisma.applicationEvent.update({
             where: { id: event.id },
             data:  {
-              type:    'WEBHOOK_PERMANENTLY_FAILED',
-              payload: { ...event.payload, lastError: `HTTP ${result.status}`, attemptNo },
+              type: 'WEBHOOK_PERMANENTLY_FAILED',
+              payload: { ...existingPayload, lastError: `HTTP ${result.status}`, attemptNo },
             },
           }).catch(() => {});
           console.error(
@@ -180,7 +187,7 @@ export const retryWebhooks = inngest.createFunction(
             where: { id: event.id },
             data:  {
               payload: {
-                ...(event.payload as Record<string, unknown>),
+                ...existingPayload,
                 attemptNo,
                 nextRetryAt,
                 lastError: `HTTP ${result.status}`,
