@@ -14,16 +14,16 @@ const applications = [
 ];
 
 const statusColor: Record<string, string> = {
-  "Pending review": "#7c6f00",
-  "Awaiting docs": "#1a3a5c",
-  "Approved": "#1a2a1a",
-  "Declined": "#3a1a1a",
+  "Pending review": "var(--badge-pending-bg)",
+  "Awaiting docs": "var(--badge-awaiting-bg)",
+  "Approved": "var(--badge-approved-bg)",
+  "Declined": "var(--badge-declined-bg)",
 };
 const statusFg: Record<string, string> = {
-  "Pending review": "#facc15",
-  "Awaiting docs": "#60a5fa",
-  "Approved": "#4ade80",
-  "Declined": "#f87171",
+  "Pending review": "var(--badge-pending-fg)",
+  "Awaiting docs": "var(--badge-awaiting-fg)",
+  "Approved": "var(--badge-approved-fg)",
+  "Declined": "var(--badge-declined-fg)",
 };
 
 const navItems = ["Dashboard", "Applications", "Loans", "Collections", "KYC / AML", "Reports", "Settings"];
@@ -35,7 +35,7 @@ export default function OpsHome() {
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 flex flex-col" style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}>
         <div className="h-16 flex items-center px-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-primary)" }}>Ops</span></span>
+          <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-secondary)" }}>Ops</span></span>
         </div>
         <nav className="flex flex-col gap-1 p-3 flex-1">
           {navItems.map((item, i) => (
@@ -89,7 +89,7 @@ export default function OpsHome() {
           <div className="rounded-xl overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
               <span className="font-bold">Application queue</span>
-              <a href="#" className="text-xs" style={{ color: "var(--color-primary)" }}>View all</a>
+              <a href="#" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
             </div>
             <table className="w-full text-sm">
               <thead>
@@ -107,7 +107,7 @@ export default function OpsHome() {
                     <td className="px-6 py-4 font-semibold">{a.amount}</td>
                     <td className="px-6 py-4" style={{ color: "var(--color-muted)" }}>{a.product}</td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-xs px-2 py-0.5 rounded" style={{ background: "var(--color-surface-2)", color: "var(--color-primary)" }}>{a.risk}</span>
+                      <span className="font-bold text-xs px-2 py-0.5 rounded" style={{ background: "var(--color-surface-2)", color: "var(--color-secondary)" }}>{a.risk}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: statusColor[a.status], color: statusFg[a.status] }}>{a.status}</span>

@@ -20,11 +20,11 @@ export default function BorrowerHome() {
 
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24 gap-6">
-        <div className="text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full" style={{ background: "var(--color-surface-2)", color: "var(--color-primary)", border: "1px solid var(--color-border)" }}>
+        <div className="text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full" style={{ background: "var(--color-surface-2)", color: "var(--color-secondary)", border: "1px solid var(--color-border)" }}>
           Fast · Transparent · Fair
         </div>
         <h1 className="text-5xl font-black tracking-tight max-w-2xl leading-tight">
-          Get funded <span style={{ color: "var(--color-primary)" }}>in 24 hours</span>
+          Get funded <span style={{ color: "var(--color-secondary)" }}>in 24 hours</span>
         </h1>
         <p className="text-lg max-w-lg" style={{ color: "var(--color-muted)" }}>
           Apply for a personal or business loan in minutes. No hidden fees, no surprises — just clear terms and fast decisions.
@@ -65,7 +65,7 @@ export default function BorrowerHome() {
             { step: "03", title: "Receive funds", desc: "Approved funds are paid directly into your bank account within 24 hours." },
           ].map((item) => (
             <div key={item.step} className="rounded-xl p-6" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <div className="text-xs font-bold mb-3" style={{ color: "var(--color-primary)" }}>{item.step}</div>
+              <div className="text-xs font-bold mb-3" style={{ color: "var(--color-secondary)" }}>{item.step}</div>
               <div className="font-bold text-lg mb-2">{item.title}</div>
               <div className="text-sm" style={{ color: "var(--color-muted)" }}>{item.desc}</div>
             </div>
@@ -82,7 +82,7 @@ export default function BorrowerHome() {
               <div className="text-sm mb-1" style={{ color: "var(--color-muted)" }}>Personal loan · REF-2024-00812</div>
               <div className="text-3xl font-black">R 15 000</div>
             </div>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "#1a2a1a", color: "#4ade80" }}>Active</span>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "var(--badge-active-bg)", color: "var(--badge-active-fg)" }}>Active</span>
           </div>
           <div className="mb-2 flex justify-between text-sm" style={{ color: "var(--color-muted)" }}>
             <span>Repaid: R 6 000</span>

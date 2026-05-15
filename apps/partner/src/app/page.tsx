@@ -21,7 +21,7 @@ export default function PartnerHome() {
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 flex flex-col" style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}>
         <div className="h-16 flex items-center px-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
-          <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-primary)" }}>Partner</span></span>
+          <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-secondary)" }}>Partner</span></span>
         </div>
         <nav className="flex flex-col gap-1 p-3 flex-1">
           {navItems.map((item, i) => (
@@ -76,7 +76,7 @@ export default function PartnerHome() {
             <div className="col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
                 <span className="font-bold">Recent loans</span>
-                <a href="#" className="text-xs" style={{ color: "var(--color-primary)" }}>View all</a>
+                <a href="#" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
               </div>
               <table className="w-full text-sm">
                 <thead>
@@ -102,8 +102,8 @@ export default function PartnerHome() {
                       <td className="px-5 py-3">
                         <span className="text-xs font-semibold px-2 py-1 rounded-full"
                           style={{
-                            background: l.status === "Active" ? "#1a2a1a" : "#3a1a1a",
-                            color: l.status === "Active" ? "#4ade80" : "#f87171",
+                            background: l.status === "Active" ? "var(--badge-active-bg)" : "var(--badge-overdue-bg)",
+                            color: l.status === "Active" ? "var(--badge-active-fg)" : "var(--badge-overdue-fg)",
                           }}>{l.status}</span>
                       </td>
                     </tr>

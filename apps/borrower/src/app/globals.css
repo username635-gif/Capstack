@@ -1,17 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  /* Colours */
-  --background: #0d0d0d;
-  --foreground: #ffffff;
-  --color-surface: #141414;
-  --color-surface-2: #1a1a1a;
-  --color-primary: #e53935;
-  --color-primary-fg: #ffffff;
-  --color-muted: #6b6b6b;
-  --color-border: #2a2a2a;
-  --color-progress-track: #2a2a2a;
-  --color-progress-fill: #e53935;
+  /* Core */
+  --background: #F8FAFC;
+  --foreground: #1E293B;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1F5F9;
+
+  /* Brand */
+  --color-primary: #0F2B3D;
+  --color-primary-fg: #FFFFFF;
+  --color-secondary: #14B8A6;
+  --color-accent: #F59E0B;
+  --color-danger: #DC2626;
+
+  /* Text & borders */
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+
+  /* Progress */
+  --color-progress-track: #E2E8F0;
+  --color-progress-fill: #14B8A6;
+
+  /* Badges */
+  --badge-approved-bg: #ECFDF5;
+  --badge-approved-fg: #059669;
+  --badge-pending-bg: #FEFCE8;
+  --badge-pending-fg: #B45309;
+  --badge-overdue-bg: #FFF7ED;
+  --badge-overdue-fg: #C2410C;
+  --badge-declined-bg: #FEF2F2;
+  --badge-declined-fg: #DC2626;
+  --badge-active-bg: #ECFDF5;
+  --badge-active-fg: #059669;
+  --badge-awaiting-bg: #EFF6FF;
+  --badge-awaiting-fg: #1D4ED8;
 
   /* Shape */
   --radius-card: 12px;
