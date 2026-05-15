@@ -69,17 +69,17 @@ export default function OpsHome() {
               {item.label}
             </a>
           ))}
-        </nav>
 
-        {/* Tools — calculator + PDF in sidebar */}
-        <div className="p-3 flex flex-col gap-1" style={{ borderTop: "1px solid var(--color-border)" }}>
+          {/* Divider */}
+          <div style={{ height: 1, background: "var(--color-border)", margin: "8px 4px" }} />
+
+          {/* Loan Calculator — opens modal */}
           <button
             onClick={() => setCalcOpen(true)}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-left transition-colors"
             style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", cursor: "pointer" }}
           >
-            {/* Calculator icon — inline so currentColor resolves correctly */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2" />
               <rect x="7" y="5" width="10" height="4" rx="1" />
               <circle cx="8"  cy="13"   r="0.8" fill="currentColor" stroke="none" />
@@ -93,13 +93,14 @@ export default function OpsHome() {
             </svg>
             Loan calculator
           </button>
+
+          {/* Downloads — navigates to /downloads */}
           <a
             href="/downloads"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", textDecoration: "none" }}
           >
-            {/* Document icon — inline so currentColor resolves correctly */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="8" y1="13" x2="16" y2="13" />
@@ -107,7 +108,9 @@ export default function OpsHome() {
             </svg>
             Download reports
           </a>
-        </div>
+        </nav>
+
+        {/* Removed separate tools div — moved into nav above */}
 
         <div className="p-4" style={{ borderTop: "1px solid var(--color-border)" }}>
           <div className="text-xs" style={{ color: "var(--color-muted)" }}>Logged in as</div>
