@@ -94,17 +94,17 @@ export async function GET(req: NextRequest) {
 
 // ─── NCR Monthly Return ───────────────────────────────────────────────────────
 
-async function _ncrMonthly(from: Date, to: Date) {
+async function _ncrMonthly(from: Date, until: Date) {
   const [err, loans] = await to(
     prisma.loan.findMany({
-      where:   { createdAt: { gte: from, lte: to } },
+      where:   { createdAt: { gte: from, lte: until } },
       include: { product: true },
     }),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
   const [cancelErr, cancelled] = await to(
-    prisma.loan.count({ where: { status: 'CANCELLED', updatedAt: { gte: from, lte: to } } }),
+    prisma.loan.count({ where: { status: 'CANCELLED', updatedAt: { gte: from, lte: until } } }),
   );
   if (cancelErr) return NextResponse.json({ error: cancelErr.message }, { status: 500 });
 
@@ -129,25 +129,25 @@ async function _ncrMonthly(from: Date, to: Date) {
 
   return NextResponse.json({
     reportType:    'NCR Monthly Return',
-    period:        { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    period:        { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
     totalOriginated:     (loans ?? []).length,
     totalCancelled:      cancelled ?? 0,
     accountsInArrears:   arrears[1] ?? 0,
     byProduct:           productSummary,
     generatedAt:         new Date().toISOString(),
-    filingDeadline:      _addDays(to, 30).toISOString().slice(0, 10),  // NCR: due by end of following month
+    filingDeadline:      _addDays(until, 30).toISOString().slice(0, 10),  // NCR: due by end of following month
   });
 }
 
 // ─── FICA Cash Threshold Report ───────────────────────────────────────────────
 
-async function _ficaCtr(from: Date, to: Date) {
+async function _ficaCtr(from: Date, until: Date) {
   // CTR threshold: R24 999 (FICA Determination of Cash Threshold 2010)
   const CTR_THRESHOLD = 2_499_900; // in cents
 
   const [err, disbursements] = await to(
     prisma.disbursement.findMany({
-      where:   { createdAt: { gte: from, lte: to }, amount: { gte: BigInt(CTR_THRESHOLD) } },
+      where:   { createdAt: { gte: from, lte: until }, amount: { gte: BigInt(CTR_THRESHOLD) } },
       include: { loan: { include: { borrower: true } } },
     }),
   );
@@ -166,7 +166,7 @@ async function _ficaCtr(from: Date, to: Date) {
   return NextResponse.json({
     reportType:      'FICA Cash Threshold Report (CTR)',
     thresholdRand:   CTR_THRESHOLD / 100,
-    period:          { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    period:          { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
     totalEntries:    reportEntries.length,
     entries:         reportEntries,
     filingNote:      'File at https://ecomply.fic.gov.za within 2 business days of each transaction',
@@ -176,11 +176,11 @@ async function _ficaCtr(from: Date, to: Date) {
 
 // ─── FICA Suspicious Activity Report log ─────────────────────────────────────
 
-async function _ficaSar(from: Date, to: Date) {
+async function _ficaSar(from: Date, until: Date) {
   // AML alerts are stored in the AmlAlert table (set sarRequired in the AML detector)
   const [err, alerts] = await to(
     prisma.amlAlert.findMany({
-      where:   { createdAt: { gte: from, lte: to }, severity: 'HIGH' },
+      where:   { createdAt: { gte: from, lte: until }, severity: 'HIGH' },
       orderBy: { createdAt: 'desc' },
     }),
   );
@@ -188,7 +188,7 @@ async function _ficaSar(from: Date, to: Date) {
 
   return NextResponse.json({
     reportType:   'FICA Suspicious Activity Reports (SAR)',
-    period:       { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    period:       { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
     totalAlerts:  (alerts ?? []).length,
     alerts:       (alerts ?? []).map(a => ({
       alertId:    a.id,
@@ -205,10 +205,10 @@ async function _ficaSar(from: Date, to: Date) {
 
 // ─── NCA Affordability Summary ────────────────────────────────────────────────
 
-async function _ncaAffordability(from: Date, to: Date) {
+async function _ncaAffordability(from: Date, until: Date) {
   const [err, decisions] = await to(
     prisma.creditDecision.findMany({
-      where:   { createdAt: { gte: from, lte: to } },
+      where:   { createdAt: { gte: from, lte: until } },
       include: { application: { include: { product: true } } },
     }),
   );
@@ -224,7 +224,7 @@ async function _ncaAffordability(from: Date, to: Date) {
 
   return NextResponse.json({
     reportType:       'NCA Affordability Assessment Summary',
-    period:           { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    period:           { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
     totalDecisions:   all.length,
     approved:         approved.length,
     declined:         declined.length,
