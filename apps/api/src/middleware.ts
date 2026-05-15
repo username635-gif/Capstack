@@ -19,9 +19,12 @@ const STATIC_ORIGINS = [
   'http://localhost:3003',
 ];
 
-function allowedOrigins(): string[] {
+function isAllowedOrigin(origin: string): boolean {
+  if (STATIC_ORIGINS.includes(origin)) return true;
+  // Allow all Vercel preview deployments (*.vercel.app) so branch previews work
+  if (origin.endsWith('.vercel.app')) return true;
   const extra = (process.env.CORS_EXTRA_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  return [...STATIC_ORIGINS, ...extra];
+  return extra.includes(origin);
 }
 
 const CORS_HEADERS = {
@@ -33,7 +36,7 @@ const CORS_HEADERS = {
 
 export function middleware(req: NextRequest) {
   const origin  = req.headers.get('origin') ?? '';
-  const allowed = allowedOrigins().includes(origin);
+  const allowed = isAllowedOrigin(origin);
   const corsOrigin = allowed ? origin : '';
 
   // Handle CORS preflight

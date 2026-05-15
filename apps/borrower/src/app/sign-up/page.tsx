@@ -6,6 +6,17 @@ import { setSession } from '@/lib/session';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
+// Demo / test data — no real personal information
+const TEST_DATA = {
+  fullName:        'Demo User',
+  email:           `demo.${Date.now()}@capstack-test.com`,
+  phone:           '+27 82 000 0000',
+  idNumber:        '8001015009087',
+  dateOfBirth:     '1980-01-01',
+  monthlyIncome:   '15000',
+  employmentStatus: 'EMPLOYED',
+};
+
 export default function SignUp() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -21,12 +32,24 @@ export default function SignUp() {
     setForm(p => ({ ...p, [field]: value }));
   }
 
+  function fillTestData() {
+    setForm({ ...TEST_DATA, email: `demo.${Date.now()}@capstack-test.com` });
+    setStep(2);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      // Validate date format before sending
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) {
+        setError('Date of birth must be in YYYY-MM-DD format (e.g. 1990-05-15)');
+        setLoading(false);
+        return;
+      }
+
       // Step 1: Create borrower
       const createRes = await fetch(`${API}/api/v1/borrowers`, {
         method:  'POST',
@@ -58,8 +81,14 @@ export default function SignUp() {
 
       setSession(authData);
       router.push('/dashboard');
-    } catch {
-      setError('Unable to reach the server. Please try again.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Network errors often say "Failed to fetch" — give a clearer message
+      if (msg.includes('fetch') || msg.includes('network') || msg.includes('CORS')) {
+        setError('Network error — the API may still be deploying. Wait 30 seconds and try again.');
+      } else {
+        setError(`Error: ${msg}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -91,7 +120,7 @@ export default function SignUp() {
         className="w-full max-w-md rounded-2xl p-8"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
       >
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="font-bold text-xl tracking-tight mb-1">
             Capstack <span style={{ color: 'var(--color-secondary)' }}>Borrower</span>
           </div>
@@ -99,6 +128,16 @@ export default function SignUp() {
             Create your account to apply for a loan.
           </p>
         </div>
+
+        {/* Test data banner */}
+        <button
+          type="button"
+          onClick={fillTestData}
+          className="w-full text-xs font-semibold px-3 py-2 rounded-lg mb-4 text-left"
+          style={{ background: 'var(--color-surface-2)', border: '1px dashed var(--color-secondary)', color: 'var(--color-secondary)' }}
+        >
+          ⚡ Fill with demo data (no real info needed)
+        </button>
 
         {/* Step indicator */}
         <div className="flex gap-2 mb-6">
@@ -132,7 +171,21 @@ export default function SignUp() {
           {step === 2 && (
             <>
               {field('South African ID number', 'idNumber', 'text', '8001015009087')}
-              {field('Date of birth', 'dateOfBirth', 'date')}
+              <div>
+                <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--color-muted)' }}>
+                  Date of birth
+                </label>
+                <input
+                  type="text"
+                  value={form.dateOfBirth}
+                  onChange={e => set('dateOfBirth', e.target.value)}
+                  required
+                  placeholder="YYYY-MM-DD (e.g. 1990-05-15)"
+                  className="w-full text-sm px-3 py-2 rounded-lg outline-none"
+                  style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                />
+                <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Format: YYYY-MM-DD</span>
+              </div>
               <div>
                 <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--color-muted)' }}>
                   Employment status
