@@ -103,10 +103,11 @@ async function _ncrMonthly(from: Date, until: Date) {
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
-  const [cancelErr, cancelled] = await to(
-    prisma.loan.count({ where: { status: 'CANCELLED', updatedAt: { gte: from, lte: until } } }),
-  );
-  if (cancelErr) return NextResponse.json({ error: cancelErr.message }, { status: 500 });
+  // TODO: The LoanStatus enum has no CANCELLED value — the schema does not model
+  // loan-level cancellation. NCR s.52 "credit agreements cancelled" refers to NCA s.121
+  // consumer cooling-off cancellations. Add a CANCELLED status to LoanStatus (and a
+  // migration) once the business process is defined. Reporting 0 until then.
+  const cancelled = 0;
 
   // Pattern 5 — reduce for product-level aggregations
   const byProduct = (loans ?? []).reduce<Record<string, { count: number; totalValue: number; aprSum: number }>>((acc, loan) => {
