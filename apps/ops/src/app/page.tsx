@@ -26,7 +26,15 @@ const statusFg: Record<string, string> = {
   "Declined": "var(--badge-declined-fg)",
 };
 
-const navItems = ["Dashboard", "Applications", "Loans", "Collections", "KYC / AML", "Reports", "Settings"];
+const navItems = [
+  { label: "Dashboard",    href: "/" },
+  { label: "Applications", href: "/applications" },
+  { label: "Loans",        href: "/loans" },
+  { label: "Collections",  href: "/collections" },
+  { label: "KYC / AML",   href: "/kyc" },
+  { label: "Reports",      href: "/reports" },
+  { label: "Settings",     href: "/settings" },
+];
 
 export default function OpsHome() {
   return (
@@ -40,8 +48,8 @@ export default function OpsHome() {
         <nav className="flex flex-col gap-1 p-3 flex-1">
           {navItems.map((item, i) => (
             <a
-              key={item}
-              href="#"
+              key={item.label}
+              href={item.href}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{
                 background: i === 0 ? "var(--color-surface-2)" : "transparent",
@@ -49,7 +57,7 @@ export default function OpsHome() {
                 border: i === 0 ? "1px solid var(--color-border)" : "1px solid transparent",
               }}
             >
-              {item}
+              {item.label}
             </a>
           ))}
         </nav>
@@ -66,9 +74,9 @@ export default function OpsHome() {
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Dashboard</h1>
           <div className="flex items-center gap-3">
-            <button className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
+            <a href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
               + New application
-            </button>
+            </a>
           </div>
         </header>
 
@@ -89,7 +97,7 @@ export default function OpsHome() {
           <div className="rounded-xl overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
               <span className="font-bold">Application queue</span>
-              <a href="#" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
+              <a href="/applications" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
             </div>
             <table className="w-full text-sm">
               <thead>

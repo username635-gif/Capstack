@@ -116,3 +116,11 @@ export type { OnfidoApplicant, OnfidoCheck } from './src/onfido';
 export { checkSanctions } from './src/sanctions';
 export type { SanctionsResult } from './src/sanctions';
 
+// ── KYB (Know Your Business) ──────────────────────────────────────────────────
+export { verifyBusiness } from './src/kyb';
+export type { BusinessInput, DirectorInput, KybResult, KybStatus } from './src/kyb';
+
+// ── Smile ID ──────────────────────────────────────────────────────────────────
+export { submitSmileJob, validateSaIdNumber, runLivenessCheck } from './src/smile-id';
+export type { SmileJobInput, SmileJobResult, SmileJobType, SmileJobStatus } from './src/smile-id';
+

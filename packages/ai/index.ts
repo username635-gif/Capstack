@@ -84,4 +84,19 @@ export async function runAgent(
 export { parseBankStatement, reconcile } from './src/statement-parser';
 export type { ParsedStatement, ParsedTransaction } from './src/statement-parser';
 export { collectionsAgent } from './src/collections-agent';
+export type { CollectionInput, CollectionAction } from './src/collections-agent';
+
+// ── AML transaction stream anomaly detection ──────────────────────────────────
+export { analyseTransactionStream } from './src/aml-detector';
+export type { Transaction, AmlAlert, AmlAnalysisResult, AmlAlertType, AmlRiskLevel } from './src/aml-detector';
+
+// ── Conversational KYC onboarding agent ───────────────────────────────────────
+export { advanceOnboarding, createOnboardingSession } from './src/onboarding-agent';
+export type {
+  OnboardingSession,
+  OnboardingTurnInput,
+  OnboardingTurnOutput,
+  OnboardingStep,
+  OnboardingData,
+} from './src/onboarding-agent';
 

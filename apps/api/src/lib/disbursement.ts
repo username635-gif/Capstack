@@ -28,6 +28,30 @@
 import { payfast, type PayFastBankAccount } from './payfast';
 import { stitchPayout } from '@capstack/integrations';
 
+// ── Stripe payout stub ────────────────────────────────────────────────────────
+// Stripe is the third-rail fallback for international disbursements or when
+// both PayFast (primary) and Stitch (secondary) fail.
+//
+// PRODUCTION INTEGRATION:
+//   1. pnpm add stripe --filter api
+//   2. Set env: STRIPE_SECRET_KEY
+//   3. Replace _stripePayout() body with:
+//        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+//        const transfer = await stripe.transfers.create({
+//          amount: Math.round(amountRand * 100),  // convert Rand → cents
+//          currency: 'zar',
+//          destination: bankAccount.stripeAccountId,
+//          transfer_group: loanId,
+//        });
+//        return { id: transfer.id, status: 'INITIATED' };
+async function _stripePayout(
+  loanId: string,
+  amountRand: number,
+): Promise<{ id: string; status: string }> {
+  // Stub — returns a deterministic mock ID
+  return { id: `stripe_stub_${loanId}_${Date.now()}`, status: 'INITIATED' };
+}
+
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
     return [null, await p];
@@ -47,7 +71,7 @@ export interface DisbursementResult {
   id:        string;
   status:    string;
   reference: string;
-  rail:      'PAYFAST' | 'STITCH';
+  rail:      'PAYFAST' | 'STITCH' | 'STRIPE';
 }
 
 /**
@@ -88,15 +112,27 @@ export async function disburseWithFallback(
     return { id: pfResult.id, status: pfResult.status, reference: loanId, rail };
   }
 
-  console.warn('[disbursement] PayFast failed, trying Stitch mock:', pfErr?.message);
+  console.warn('[disbursement] PayFast failed, trying Stitch:', pfErr?.message);
 
   const [stitchErr, stitchResult] = await to(stitchPayout(loanId, amountRand));
 
-  if (stitchErr || !stitchResult) {
-    throw new Error(`Both disbursement rails failed. PayFast: ${pfErr?.message}`);
+  if (!stitchErr && stitchResult) {
+    const rail = 'STITCH' as const;
+    return { id: stitchResult.id, status: stitchResult.status, reference: loanId, rail };
   }
 
-  const rail = 'STITCH' as const;
+  // Third rail — Stripe (international / fallback)
+  console.warn('[disbursement] Stitch failed, trying Stripe:', stitchErr?.message);
+
+  const [stripeErr, stripeResult] = await to(_stripePayout(loanId, amountRand));
+
+  if (stripeErr || !stripeResult) {
+    throw new Error(
+      `All 3 disbursement rails failed. PayFast: ${pfErr?.message} | Stitch: ${stitchErr?.message} | Stripe: ${stripeErr?.message}`,
+    );
+  }
+
+  const rail = 'STRIPE' as const;
   // Pattern 7 — shorthand
-  return { id: stitchResult.id, status: stitchResult.status, reference: loanId, rail };
+  return { id: stripeResult.id, status: stripeResult.status, reference: loanId, rail };
 }

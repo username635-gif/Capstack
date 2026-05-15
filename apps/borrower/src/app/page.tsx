@@ -7,13 +7,14 @@ export default function BorrowerHome() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="text-lg font-bold tracking-tight">Capstack</span>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</a>
-            <button
+            <a href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</a>
+            <a
+              href="/apply"
               className="text-sm font-semibold px-4 py-2 rounded-lg"
               style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}
             >
               Apply now
-            </button>
+            </a>
           </div>
         </div>
       </nav>
@@ -30,12 +31,12 @@ export default function BorrowerHome() {
           Apply for a personal or business loan in minutes. No hidden fees, no surprises — just clear terms and fast decisions.
         </p>
         <div className="flex gap-3 mt-2">
-          <button className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-primary)", color: "#fff" }}>
+          <a href="/apply" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-primary)", color: "#fff" }}>
             Apply for a loan
-          </button>
-          <button className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--foreground)" }}>
+          </a>
+          <a href="/dashboard" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--foreground)" }}>
             Check my application
-          </button>
+          </a>
         </div>
       </section>
 
