@@ -38,6 +38,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { inngest } from '@/lib/inngest';
 
+const DEMO_MODE = !process.env.DATABASE_URL;
+
 const IDEMPOTENCY_TTL = 60 * 60 * 24; // 24 hours — matches typical session length
 
 // Body shape for loan application requests
@@ -100,6 +102,29 @@ export async function POST(req: NextRequest) {
       { error: 'Missing required fields: borrowerId, productId, amountRequested, termDaysRequested' },
       { status: 422 }
     );
+  }
+
+  // Demo mode — return a stub application without touching the DB
+  if (DEMO_MODE) {
+    const now = new Date().toISOString();
+    const demoApp = {
+      id:                `demo_app_${Math.random().toString(36).slice(2, 10)}`,
+      borrowerId,
+      productId,
+      amountRequested:   requestedAmount,
+      termDaysRequested,
+      purpose,
+      channel,
+      externalRef,
+      status:            'SUBMITTED',
+      submittedAt:       now,
+      createdAt:         now,
+      updatedAt:         now,
+    };
+    if (idempotencyKey) {
+      await redis.set(`idempotency:${idempotencyKey}`, demoApp, { ex: IDEMPOTENCY_TTL }).catch(() => {});
+    }
+    return NextResponse.json(demoApp, { status: 201 });
   }
 
   // Lazy import prisma so Next.js edge doesn't complain
