@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
 
+const DEMO_MODE = !process.env.DATABASE_URL;
+
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try { return [null, await p]; }
   catch (err) { return [err instanceof Error ? err : new Error(String(err)), null]; }
@@ -25,6 +27,16 @@ export async function POST(req: NextRequest) {
 
   const { email } = body ?? {};
   if (!email) return NextResponse.json({ error: 'email is required' }, { status: 400 });
+
+  // Demo mode — return a stub session so the UI can proceed without a real DB
+  if (DEMO_MODE) {
+    return NextResponse.json({
+      id:    `demo_${Buffer.from(email).toString('base64').replace(/[^a-z0-9]/gi, '').slice(0, 12)}`,
+      email,
+      name:  email.split('@')[0],
+      type:  'borrower',
+    });
+  }
 
   const [err, borrower] = await to(
     prisma.borrower.findFirst({

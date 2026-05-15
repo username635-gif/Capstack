@@ -15,6 +15,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
 
+// DEMO MODE: when no database is configured, return stub responses so the
+// UI flow can be demonstrated end-to-end without a real backend.
+const DEMO_MODE = !process.env.DATABASE_URL;
+
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
     return [null, await p];
@@ -90,6 +94,33 @@ export async function POST(req: NextRequest) {
 
   if (type !== 'INDIVIDUAL' && type !== 'BUSINESS') {
     return NextResponse.json({ error: 'type must be INDIVIDUAL or BUSINESS' }, { status: 400 });
+  }
+
+  // Demo mode — no DB required
+  if (DEMO_MODE) {
+    const now = new Date().toISOString();
+    const id  = `demo_${Math.random().toString(36).slice(2, 10)}`;
+    return NextResponse.json({
+      id,
+      type,
+      email,
+      phone: phone ?? '',
+      individual: (type === 'INDIVIDUAL' && individual) ? {
+        id: `demo_ind_${Math.random().toString(36).slice(2, 10)}`,
+        borrowerId: id,
+        fullName:         individual.fullName,
+        idNumber:         individual.idNumber,
+        dateOfBirth:      individual.dateOfBirth,
+        monthlyIncome:    individual.monthlyIncome ?? null,
+        employmentStatus: individual.employmentStatus ?? null,
+        residentialAddress: {},
+        createdAt: now,
+        updatedAt: now,
+      } : null,
+      business: null,
+      createdAt: now,
+      updatedAt: now,
+    }, { status: 201 });
   }
 
   const [err, borrower] = await to(
