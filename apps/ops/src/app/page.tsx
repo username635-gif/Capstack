@@ -1,7 +1,9 @@
 'use client';
 
-import Link       from 'next/link';
+import { useState } from 'react';
+import Link         from 'next/link';
 import { useRouter } from 'next/navigation';
+import { LoanCalculator, CalculatorIcon } from '@/app/_components/LoanCalculator';
 
 const stats = [
   { label: "Active loans", value: "1 284", delta: "+12 today" },
@@ -43,6 +45,7 @@ const navItems = [
 
 export default function OpsHome() {
   const router = useRouter();
+  const [calcOpen, setCalcOpen] = useState(false);
   return (
     <div className="flex min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
 
@@ -75,11 +78,30 @@ export default function OpsHome() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        <LoanCalculator open={calcOpen} onClose={() => setCalcOpen(false)} />
 
         {/* Top bar */}
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Dashboard</h1>
           <div className="flex items-center gap-3">
+            {/* Calculator icon — thin lines */}
+            <button
+              onClick={() => setCalcOpen(true)}
+              aria-label="Open loan calculator"
+              title="Loan Calculator"
+              style={{
+                background:   'transparent',
+                border:       '1px solid var(--color-border)',
+                borderRadius: 8,
+                padding:      '5px 7px',
+                cursor:       'pointer',
+                display:      'flex',
+                alignItems:   'center',
+                lineHeight:   1,
+              }}
+            >
+              <CalculatorIcon size={18} color="var(--color-muted)" strokeWidth={1.4} />
+            </button>
             <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
               + New application
             </Link>

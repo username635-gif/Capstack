@@ -48,6 +48,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
+import { renderBorrowerStatement } from '@/lib/pdf/borrower-statement';
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
@@ -158,80 +159,54 @@ export async function GET(
 
   // ── Serve as PDF or JSON ───────────────────────────────────────────────
   if (format === 'pdf') {
-    // Stub: return plain-text representation until react-pdf is integrated
-    // Production: generate a real PDF with react-pdf or puppeteer
-    const textContent = _formatStatementAsText(statement);
-    return new Response(textContent, {
+    const pdfBuffer = await renderBorrowerStatement({
+      generatedAt:  new Date().toISOString().slice(0, 10),
+      loanNumber:   loan.loanNumber,
+      borrower: {
+        name:  statement.borrower.name,
+        email: statement.borrower.email,
+        phone: statement.borrower.phone,
+      },
+      loan: {
+        product:       statement.loan.product,
+        principalRand: statement.loan.principalRand,
+        aprPct:        statement.loan.aprPct,
+        termDays:      statement.loan.termDays,
+        startDate:     statement.loan.startDate,
+        maturityDate:  statement.loan.maturityDate,
+        status:        statement.loan.status,
+      },
+      ncr: {
+        totalCostOfCreditRand:   statement.ncr.totalCostOfCredit,
+        annualPercentageRatePct: aprPct.toFixed(2),
+        initiationFeeRand:       statement.ncr.initiationFeeRand,
+        monthlyServiceFeeRand:   statement.ncr.monthlyServiceFeeRand,
+      },
+      currentBalance: {
+        outstandingPrincipal: statement.currentBalance.outstandingPrincipal,
+        outstandingInterest:  statement.currentBalance.outstandingInterest,
+        outstandingFees:      statement.currentBalance.outstandingFees,
+        totalOutstanding:     statement.currentBalance.totalOutstanding,
+      },
+      repaymentHistory: statement.repaymentHistory.map(r => ({
+        date:          r.date,
+        amountRand:    r.amountRand,
+        rail:          r.rail,
+        feesRand:      r.allocation.feesRand,
+        interestRand:  r.allocation.interestRand,
+        principalRand: r.allocation.principalRand,
+      })),
+      schedule: statement.schedule,
+    });
+
+    return new Response(pdfBuffer, {
       headers: {
-        'Content-Type':        'text/plain; charset=utf-8',
-        'Content-Disposition': `attachment; filename="statement_${loanId}.txt"`,
+        'Content-Type':        'application/pdf',
+        'Content-Disposition': `attachment; filename="statement_${loanId}.pdf"`,
       },
     });
   }
 
   // Pattern 7 — shorthand
   return NextResponse.json({ statement });
-}
-
-// ─── Text formatter (stub until react-pdf is wired) ───────────────────────────
-
-function _formatStatementAsText(s: ReturnType<typeof _buildStatement>): string {
-  const lines: string[] = [
-    '='.repeat(70),
-    `${s.lender.toUpperCase()}`,
-    `LOAN STATEMENT — Generated ${s.statementDate}`,
-    '='.repeat(70),
-    '',
-    '[ NCR COMPLIANCE DISCLOSURE ]',
-    `Annual Percentage Rate (APR):   ${s.ncr.annualPercentageRate}`,
-    `Total Cost of Credit:           R${s.ncr.totalCostOfCredit}`,
-    `Initiation Fee:                 R${s.ncr.initiationFeeRand}`,
-    `Monthly Service Fee:            R${s.ncr.monthlyServiceFeeRand}`,
-    s.ncr.nca_s92_disclosure,
-    '',
-    '[ BORROWER ]',
-    `Name:      ${s.borrower.name}`,
-    `Email:     ${s.borrower.email}`,
-    `Phone:     ${s.borrower.phone}`,
-    '',
-    '[ LOAN DETAILS ]',
-    `Loan Number:   ${s.loan.loanNumber}`,
-    `Product:       ${s.loan.product}`,
-    `Principal:     R${s.loan.principalRand}`,
-    `APR:           ${s.loan.aprPct}%`,
-    `Start:         ${s.loan.startDate}   Maturity: ${s.loan.maturityDate}`,
-    `Status:        ${s.loan.status}`,
-    '',
-    '[ CURRENT BALANCE ]',
-    `Outstanding Principal: R${s.currentBalance.outstandingPrincipal}`,
-    `Outstanding Interest:  R${s.currentBalance.outstandingInterest}`,
-    `Outstanding Fees:      R${s.currentBalance.outstandingFees}`,
-    `TOTAL OUTSTANDING:     R${s.currentBalance.totalOutstanding}`,
-    '',
-    '[ REPAYMENT HISTORY ]',
-    'Date         Amount (R)   Rail              Principal    Interest     Fees',
-    '-'.repeat(70),
-    ...s.repaymentHistory.map(r =>
-      `${r.date}   ${r.amountRand.padStart(10)}   ${r.rail.padEnd(16)}  ${r.allocation.principalRand.padStart(10)}   ${r.allocation.interestRand.padStart(10)}   ${r.allocation.feesRand.padStart(8)}`
-    ),
-    '',
-    '[ AMORTIZATION SCHEDULE ]',
-    '#   Due Date     Total (R)    Principal    Interest     Status',
-    '-'.repeat(70),
-    ...s.schedule.map(s =>
-      `${String(s.installmentNo).padStart(2)}  ${s.dueDate}   ${s.totalDueRand.padStart(10)}   ${s.principalRand.padStart(10)}   ${s.interestRand.padStart(10)}   ${s.status}`
-    ),
-    '',
-    '='.repeat(70),
-    'This statement is for information purposes only.',
-    'Registration: NCR — National Credit Regulator (registration number required).',
-    '='.repeat(70),
-  ];
-
-  return lines.join('\n');
-}
-
-// Type helper for the text formatter
-function _buildStatement(s: Parameters<typeof _formatStatementAsText>[0]) {
-  return s;
 }

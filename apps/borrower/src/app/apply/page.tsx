@@ -5,6 +5,7 @@ import { useRouter }           from 'next/navigation';
 import Link from 'next/link';
 import { getSession }          from '@/lib/session';
 import { ThemeToggle }         from '@/app/_components/ThemeProvider';
+import { LoanCalculator, CalculatorIcon } from '@/app/_components/LoanCalculator';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
@@ -28,6 +29,7 @@ export default function Apply() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [prodLoading, setProdLoading] = useState(true);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/api/v1/products`)
@@ -74,12 +76,32 @@ export default function Apply() {
       className="min-h-screen flex flex-col"
       style={{ background: 'var(--background)', color: 'var(--foreground)' }}
     >
+      <LoanCalculator open={calcOpen} onClose={() => setCalcOpen(false)} />
+
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="font-bold text-base tracking-tight">Capstack</Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            {/* Calculator icon — thin white outline */}
+            <button
+              onClick={() => setCalcOpen(true)}
+              aria-label="Open loan calculator"
+              title="Loan Calculator"
+              style={{
+                background:   'transparent',
+                border:       '1px solid rgba(255,255,255,0.25)',
+                borderRadius: 8,
+                padding:      '5px 7px',
+                cursor:       'pointer',
+                display:      'flex',
+                alignItems:   'center',
+                lineHeight:   1,
+              }}
+            >
+              <CalculatorIcon size={18} color="var(--foreground)" strokeWidth={1.4} />
+            </button>
             <Link href="/dashboard" className="text-sm" style={{ color: 'var(--color-muted)' }}>My dashboard</Link>
           </div>
         </div>
