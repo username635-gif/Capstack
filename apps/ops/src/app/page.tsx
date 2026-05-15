@@ -1,4 +1,7 @@
-import Link from 'next/link';
+'use client';
+
+import Link       from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const stats = [
   { label: "Active loans", value: "1 284", delta: "+12 today" },
@@ -8,11 +11,11 @@ const stats = [
 ];
 
 const applications = [
-  { ref: "APP-2026-04891", borrower: "Sipho Dlamini", amount: "R 25 000", product: "Personal", status: "Pending review", risk: "B" },
-  { ref: "APP-2026-04890", borrower: "Acme Trading (Pty)", amount: "R 120 000", product: "Business", status: "Awaiting docs", risk: "C" },
-  { ref: "APP-2026-04889", borrower: "Naledi Mokoena", amount: "R 8 000", product: "Salary advance", status: "Approved", risk: "A" },
-  { ref: "APP-2026-04888", borrower: "James van der Merwe", amount: "R 50 000", product: "Term loan", status: "Declined", risk: "D" },
-  { ref: "APP-2026-04887", borrower: "Fatima Cassim", amount: "R 15 000", product: "BNPL", status: "Pending review", risk: "B" },
+  { id: "a1", ref: "APP-2026-04891", borrower: "Sipho Dlamini",       amount: "R 25 000",  product: "Personal",       status: "Pending review", risk: "B" },
+  { id: "a2", ref: "APP-2026-04890", borrower: "Naledi Mokoena",      amount: "R 120 000", product: "Business",       status: "Awaiting docs",  risk: "A" },
+  { id: "a3", ref: "APP-2026-04889", borrower: "James van der Merwe", amount: "R 8 000",   product: "Short-Term",     status: "Approved",      risk: "C" },
+  { id: "a4", ref: "APP-2026-04888", borrower: "Fatima Cassim",       amount: "R 50 000",  product: "Personal",       status: "Declined",      risk: "D" },
+  { id: "a5", ref: "APP-2026-04887", borrower: "Thabo Nkosi",         amount: "R 35 000",  product: "Personal",       status: "Pending review", risk: "B" },
 ];
 
 const statusColor: Record<string, string> = {
@@ -39,6 +42,7 @@ const navItems = [
 ];
 
 export default function OpsHome() {
+  const router = useRouter();
   return (
     <div className="flex min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
 
@@ -123,7 +127,7 @@ export default function OpsHome() {
                       <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: statusColor[a.status], color: statusFg[a.status] }}>{a.status}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-xs px-3 py-1 rounded-lg font-medium" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)" }}>Review</button>
+                      <button onClick={() => router.push(`/applications/${a.id}`)} className="text-xs px-3 py-1 rounded-lg font-medium" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", cursor: 'pointer' }}>Review</button>
                     </td>
                   </tr>
                 ))}
