@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getSession }          from '@/lib/session';
 import { ThemeToggle }         from '@/app/_components/ThemeProvider';
 import { LoanCalculator, CalculatorIcon } from '@/app/_components/LoanCalculator';
+import { SmileIdDemo, type SmileIdDemoResult } from '@/app/_components/SmileIdDemo';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
@@ -30,6 +31,7 @@ export default function Apply() {
   const [error, setError]       = useState('');
   const [prodLoading, setProdLoading] = useState(true);
   const [calcOpen, setCalcOpen] = useState(false);
+  const [identityResult, setIdentityResult] = useState<SmileIdDemoResult | null>(null);
 
   useEffect(() => {
     fetch(`${API}/api/v1/products`)
@@ -110,7 +112,7 @@ export default function Apply() {
       <div className="max-w-3xl mx-auto w-full px-6 py-12">
         {/* Progress */}
         <div className="flex items-center gap-3 mb-10">
-          {['Select product', 'Loan details', 'Review'].map((label, i) => (
+          {['Select product', 'Loan details', 'Identity check', 'Review'].map((label, i, steps) => (
             <div key={label} className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div
@@ -126,7 +128,7 @@ export default function Apply() {
                   {label}
                 </span>
               </div>
-              {i < 2 && <div className="w-8 h-px" style={{ background: 'var(--color-border)' }} />}
+              {i < steps.length - 1 && <div className="w-8 h-px" style={{ background: 'var(--color-border)' }} />}
             </div>
           ))}
         </div>
@@ -262,14 +264,45 @@ export default function Apply() {
                 className="px-6 py-3 rounded-lg text-sm font-semibold"
                 style={{ background: 'var(--color-primary)', color: '#fff', opacity: amount && termDays ? 1 : 0.4 }}
               >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — Identity check */}
+        {step === 3 && selected && (
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Identity check</h2>
+            <p className="text-sm mb-8" style={{ color: 'var(--color-muted)' }}>
+              This demo simulates the future Smile ID face and document verification step.
+              It shows the borrower journey now, and can be swapped for the live provider later.
+            </p>
+
+            <SmileIdDemo initialResult={identityResult} onComplete={setIdentityResult} />
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setStep(2)}
+                className="px-6 py-3 rounded-lg text-sm font-semibold"
+                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setStep(4)}
+                disabled={!identityResult}
+                className="px-6 py-3 rounded-lg text-sm font-semibold"
+                style={{ background: 'var(--color-primary)', color: '#fff', opacity: identityResult ? 1 : 0.4 }}
+              >
                 Review
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3 — Review */}
-        {step === 3 && selected && (
+        {/* Step 4 — Review */}
+        {step === 4 && selected && (
           <div>
             <h2 className="text-2xl font-bold mb-2">Review your application</h2>
             <p className="text-sm mb-8" style={{ color: 'var(--color-muted)' }}>
@@ -286,6 +319,7 @@ export default function Apply() {
                 ['Term',       `${termDays} days`],
                 ['Purpose',    purpose],
                 ['APR',        fmtApr(selected.defaultAprBps)],
+                ['Identity check', identityResult ? `Smile ID demo passed (${identityResult.confidence}% confidence)` : 'Pending'],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between text-sm">
                   <span style={{ color: 'var(--color-muted)' }}>{k}</span>
