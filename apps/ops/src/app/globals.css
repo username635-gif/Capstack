@@ -54,18 +54,18 @@
   --color-border: #30363D;
   --color-progress-track: #30363D;
   --color-progress-fill: #2DD4BF;
-  --badge-approved-bg: #0D2818;
-  --badge-approved-fg: #3FB950;
-  --badge-pending-bg: #1C1A0A;
-  --badge-pending-fg: #E3B341;
-  --badge-overdue-bg: #1C1005;
-  --badge-overdue-fg: #F0883E;
-  --badge-declined-bg: #1C0A0A;
-  --badge-declined-fg: #F85149;
-  --badge-active-bg: #0D2818;
-  --badge-active-fg: #3FB950;
-  --badge-awaiting-bg: #0A1628;
-  --badge-awaiting-fg: #79C0FF;
+  --badge-approved-bg: #182F22;
+  --badge-approved-fg: #86EFAC;
+  --badge-pending-bg: #252009;
+  --badge-pending-fg: #D4A838;
+  --badge-overdue-bg: #251A07;
+  --badge-overdue-fg: #FDBA74;
+  --badge-declined-bg: #271414;
+  --badge-declined-fg: #FCA5A5;
+  --badge-active-bg: #182F22;
+  --badge-active-fg: #86EFAC;
+  --badge-awaiting-bg: #101D2E;
+  --badge-awaiting-fg: #93C5FD;
 }
 
 @theme inline {
