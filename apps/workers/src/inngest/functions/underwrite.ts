@@ -78,31 +78,75 @@ export const underwriteApplication = inngest.createFunction(
       };
     });
 
-    // Step 3: Persist credit decision
+    // ── STEP 3: ML scoring (optional — falls back gracefully if service is down) ─
+    // CREDIT_MODEL_URL must point to the FastAPI serving container, e.g.
+    //   https://capstack-ml.railway.app  or  http://localhost:8000  in dev.
+    // If unset or unreachable the rules-based decision is used unchanged.
+    const mlScore = await step.run('ml-score', async () => {
+      const modelUrl = process.env.CREDIT_MODEL_URL;
+      if (!modelUrl) return null;
+
+      const monthlyIncomeZar = Number(app.borrower.individual?.monthlyIncome ?? 0n) / 100;
+      const payload = {
+        income:            monthlyIncomeZar,
+        dti:               Math.min(1, decision.dtiPct / 100),
+        overdraft_count:   0,    // TODO: pull from credit bureau once integrated
+        bureau_score:      650,  // TODO: pull from KYC check once bureau is wired
+        employment_months: 12,   // TODO: pull from Borrower.individual.employmentMonths
+      };
+
+      try {
+        const controller = new AbortController();
+        const timeout    = setTimeout(() => controller.abort(), 5_000); // 5 s hard timeout
+        const res = await fetch(`${modelUrl}/predict`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+          signal:  controller.signal,
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        return (await res.json()) as { pd: number; band: string; model_version: string };
+      } catch {
+        // Timeout, ECONNREFUSED, etc. — degrade gracefully rather than failing the job.
+        return null;
+      }
+    });
+
+    // Blend rule engine + ML:
+    //   • ML can VETO an approval (pd ≥ 0.20 → band D/E → decline)
+    //   • ML cannot override a rules hard-decline (NCA gates must still pass)
+    //   • Falls back to pure rules when ML is unavailable (mlScore === null)
+    const finalApproved  = decision.approved && (mlScore === null || mlScore.pd < 0.20);
+    const finalPdScore   = mlScore !== null ? mlScore.pd : decision.dtiPct / 100;
+    const finalBand      = mlScore !== null ? mlScore.band : decision.riskBand;
+    const modelVersion   = mlScore !== null ? `rules-v1+${mlScore.model_version}` : 'rules-v1';
+
+    // Step 4: Persist credit decision
     await step.run('persist-decision', () =>
       prisma.creditDecision.create({
         data: {
           applicationId,
-          modelVersion:   'rules-v1',
-          pdScore:        decision.dtiPct / 100,
+          modelVersion,
+          pdScore:        finalPdScore,
           lgdScore:       0.5,
-          expectedLoss:   (decision.dtiPct / 100) * 0.5,
-          riskBand:       decision.riskBand,
-          recommendation: decision.approved ? 'APPROVE' : 'DECLINE',
-          approvedAmount: decision.approved ? BigInt(decision.amount) : null,
-          approvedAprBps: decision.approved ? decision.approvedAprBps : null,
-          approvedTermDays: decision.approved ? app.termDaysRequested : null,
+          expectedLoss:   finalPdScore * 0.5,
+          riskBand:       finalBand,
+          recommendation: finalApproved ? 'APPROVE' : 'DECLINE',
+          approvedAmount: finalApproved ? BigInt(decision.amount) : null,
+          approvedAprBps: finalApproved ? decision.approvedAprBps : null,
+          approvedTermDays: finalApproved ? app.termDaysRequested : null,
         },
       }),
     );
 
-    // Step 4: Emit downstream event
-    const eventName = decision.approved ? 'application/approved' : 'application/rejected';
+    // Step 5: Emit downstream event
+    const eventName = finalApproved ? 'application/approved' : 'application/rejected';
     await step.sendEvent('emit-decision', {
       name: eventName,
       data: { applicationId },
     });
 
-    return decision;
+    return { ...decision, finalApproved, finalPdScore, finalBand, modelVersion };
   },
 );
