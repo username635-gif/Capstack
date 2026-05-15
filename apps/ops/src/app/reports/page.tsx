@@ -5,6 +5,49 @@ import OpsLayout    from '@/app/_components/OpsLayout';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
+const DEMO_REPORTS: Record<ReportType, object> = {
+  NCR: {
+    period: { from: '', to: '' },
+    totalAgreements: { count: 127, valueRand: 4213000 },
+    cancelledAgreements: { count: 4, valueRand: 182000 },
+    accountsInArrears: { count: 18, pct: '14.2%' },
+    averageAprByProduct: { 'Personal Loan': '18.0%', 'Business Loan': '12.0%', 'Short-Term Loan': '36.0%' },
+    reportedAt: new Date().toISOString(),
+  },
+  FICA: {
+    period: { from: '', to: '' },
+    cashThresholdReports: [],
+    suspiciousActivityReports: [
+      { id: 'SAR-001', borrowerId: 'b_demo_001', alertType: 'STRUCTURING', riskLevel: 'HIGH', detectedAt: '2026-05-10T09:00:00Z', sarRequired: true, filed: false },
+    ],
+    amlAlertsTotal: 3,
+    highRiskAlerts: 1,
+    reportedAt: new Date().toISOString(),
+  },
+  NCA: {
+    period: { from: '', to: '' },
+    averageDtiByProduct: { 'Personal Loan': '31.4%', 'Business Loan': '28.7%', 'Short-Term Loan': '38.2%' },
+    declineReasons: [
+      { reason: 'Income below R3 000 threshold', count: 12 },
+      { reason: 'DTI exceeds 45%', count: 8 },
+      { reason: 'Employment < 3 months', count: 5 },
+    ],
+    approvalRate: '74.1%',
+    reportedAt: new Date().toISOString(),
+  },
+  IFRS9: {
+    period: { from: '', to: '' },
+    ecl: {
+      stage1: { loanCount: 95, provisionRand: 47300, description: 'Performing (0 DPD) — 12-month ECL' },
+      stage2: { loanCount: 21, provisionRand: 312000, description: 'Under-performing (1–89 DPD) — lifetime ECL' },
+      stage3: { loanCount: 11, provisionRand: 1840000, description: 'Credit-impaired (90+ DPD) — lifetime ECL' },
+      totalProvisionRand: 2199300,
+      totalLoans: 127,
+    },
+    reportedAt: new Date().toISOString(),
+  },
+};
+
 type ReportType = 'NCR' | 'FICA' | 'NCA' | 'IFRS9';
 
 const REPORT_DESCRIPTIONS: Record<ReportType, string> = {
@@ -32,15 +75,10 @@ export default function ReportsPage() {
     setLoading(true);
     setError(null);
     setData(null);
-    const url = `${API}/api/v1/reports?type=${reportType}&from=${from}&to=${to}`;
-    try {
-      const res  = await fetch(url, { headers: { Authorization: 'Bearer demo' } });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error ?? 'Failed to generate report.'); setLoading(false); return; }
-      setData(json);
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    // Instant demo data — no API call needed
+    await new Promise(r => setTimeout(r, 300));
+    const report = { ...DEMO_REPORTS[reportType], period: { from, to } };
+    setData(report);
     setLoading(false);
   }
 

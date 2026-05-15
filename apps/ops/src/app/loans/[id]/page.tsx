@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter }                 from 'next/navigation';
-import OpsLayout                     from '@/app/_components/OpsLayout';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+import { useState, use } from 'react';
+import { useRouter }     from 'next/navigation';
+import OpsLayout         from '@/app/_components/OpsLayout';
 
 type ScheduleEntry = { id: string; period: number; paymentDate: string; openingBalance: number; scheduledPayment: number; principal: number; interest: number; closingBalance: number };
 type Repayment     = { id: string; receivedAt: string; amount: number; method?: string };
@@ -18,20 +16,109 @@ type LoanDetail    = {
   repayments?: Repayment[];
 };
 
+// Helper: generate a fixed-payment amortisation schedule
+function makeSchedule(id: string, principal: number, aprBps: number, months: number, start: string): ScheduleEntry[] {
+  const r   = aprBps / 10000 / 12;
+  const pmt = r > 0 ? Math.round(principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1)) : Math.round(principal / months);
+  const entries: ScheduleEntry[] = [];
+  let bal = principal;
+  const d = new Date(start);
+  for (let i = 1; i <= months && bal > 0; i++) {
+    const interest  = Math.round(bal * r);
+    const princ     = Math.min(bal, pmt - interest);
+    const closing   = bal - princ;
+    d.setMonth(d.getMonth() + 1);
+    entries.push({ id: `${id}-s${i}`, period: i, paymentDate: d.toISOString().slice(0, 10), openingBalance: bal, scheduledPayment: pmt, principal: princ, interest, closingBalance: closing });
+    bal = closing;
+  }
+  return entries;
+}
+
+const DEMO: Record<string, LoanDetail> = {
+  l1: {
+    id: 'l1', loanNumber: 'LN-2026-00091', status: 'ACTIVE', principal: 2500000, outstandingPrincipal: 2200000, aprBps: 1800, startDate: '2026-02-01', maturityDate: '2028-02-01', daysPastDue: 0,
+    borrower: { firstName: 'Sipho',  lastName: 'Dlamini',      email: 'sipho@example.co.za'   }, product: { name: 'Personal Loan'   },
+    schedule:   makeSchedule('l1', 2500000, 1800, 24, '2026-02-01'),
+    repayments: [
+      { id: 'r1a', receivedAt: '2026-03-01T08:00:00Z', amount: 124850, method: 'Debit order' },
+      { id: 'r1b', receivedAt: '2026-04-01T08:00:00Z', amount: 124850, method: 'Debit order' },
+      { id: 'r1c', receivedAt: '2026-05-01T08:00:00Z', amount: 124850, method: 'Debit order' },
+    ],
+  },
+  l2: {
+    id: 'l2', loanNumber: 'LN-2026-00088', status: 'ACTIVE', principal: 12000000, outstandingPrincipal: 11400000, aprBps: 1200, startDate: '2026-01-15', maturityDate: '2029-01-15', daysPastDue: 0,
+    borrower: { firstName: 'Naledi', lastName: 'Mokoena',      email: 'naledi@example.co.za'  }, product: { name: 'Business Loan'   },
+    schedule:   makeSchedule('l2', 12000000, 1200, 36, '2026-01-15'),
+    repayments: [
+      { id: 'r2a', receivedAt: '2026-02-15T08:00:00Z', amount: 398667, method: 'EFT' },
+      { id: 'r2b', receivedAt: '2026-03-15T08:00:00Z', amount: 398667, method: 'EFT' },
+      { id: 'r2c', receivedAt: '2026-04-15T08:00:00Z', amount: 398667, method: 'EFT' },
+    ],
+  },
+  l3: {
+    id: 'l3', loanNumber: 'LN-2026-00085', status: 'ACTIVE', principal: 800000, outstandingPrincipal: 650000, aprBps: 3600, startDate: '2026-03-01', maturityDate: '2026-09-01', daysPastDue: 14,
+    borrower: { firstName: 'James',  lastName: 'van der Merwe', email: 'james@example.co.za'   }, product: { name: 'Short-Term Loan' },
+    schedule:   makeSchedule('l3', 800000, 3600, 6, '2026-03-01'),
+    repayments: [
+      { id: 'r3a', receivedAt: '2026-04-01T08:00:00Z', amount: 145333, method: 'EFT' },
+    ],
+  },
+  l4: {
+    id: 'l4', loanNumber: 'LN-2025-00072', status: 'ACTIVE', principal: 7500000, outstandingPrincipal: 5200000, aprBps: 1800, startDate: '2025-09-01', maturityDate: '2027-09-01', daysPastDue: 32,
+    borrower: { firstName: 'Lerato', lastName: 'Sithole',      email: 'lerato@example.co.za'  }, product: { name: 'Business Loan'   },
+    schedule:   makeSchedule('l4', 7500000, 1800, 24, '2025-09-01'),
+    repayments: [
+      { id: 'r4a', receivedAt: '2025-10-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+      { id: 'r4b', receivedAt: '2025-11-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+      { id: 'r4c', receivedAt: '2025-12-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+      { id: 'r4d', receivedAt: '2026-01-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+      { id: 'r4e', receivedAt: '2026-02-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+      { id: 'r4f', receivedAt: '2026-03-01T08:00:00Z', amount: 374167, method: 'Debit order' },
+    ],
+  },
+  l5: {
+    id: 'l5', loanNumber: 'LN-2025-00061', status: 'PAID_IN_FULL', principal: 1500000, outstandingPrincipal: 0, aprBps: 2400, startDate: '2025-06-01', maturityDate: '2026-06-01', daysPastDue: 0,
+    borrower: { firstName: 'Andile', lastName: 'Zulu',          email: 'andile@example.co.za'  }, product: { name: 'Personal Loan'   },
+    schedule:   makeSchedule('l5', 1500000, 2400, 12, '2025-06-01'),
+    repayments: Array.from({ length: 12 }, (_, i) => ({ id: `r5-${i}`, receivedAt: new Date(2025, 6 + i, 1).toISOString(), amount: 141250, method: 'Debit order' })),
+  },
+  l6: {
+    id: 'l6', loanNumber: 'LN-2025-00058', status: 'ACTIVE', principal: 3500000, outstandingPrincipal: 3100000, aprBps: 1800, startDate: '2025-12-01', maturityDate: '2027-06-01', daysPastDue: 0,
+    borrower: { firstName: 'Thabo',  lastName: 'Nkosi',         email: 'thabo@example.co.za'   }, product: { name: 'Personal Loan'   },
+    schedule:   makeSchedule('l6', 3500000, 1800, 18, '2025-12-01'),
+    repayments: [
+      { id: 'r6a', receivedAt: '2026-01-01T08:00:00Z', amount: 218056, method: 'Debit order' },
+      { id: 'r6b', receivedAt: '2026-02-01T08:00:00Z', amount: 218056, method: 'Debit order' },
+      { id: 'r6c', receivedAt: '2026-03-01T08:00:00Z', amount: 218056, method: 'Debit order' },
+      { id: 'r6d', receivedAt: '2026-04-01T08:00:00Z', amount: 218056, method: 'Debit order' },
+      { id: 'r6e', receivedAt: '2026-05-01T08:00:00Z', amount: 218056, method: 'Debit order' },
+    ],
+  },
+  l7: {
+    id: 'l7', loanNumber: 'LN-2025-00044', status: 'DEFAULTED', principal: 5000000, outstandingPrincipal: 4800000, aprBps: 2400, startDate: '2025-05-01', maturityDate: '2026-05-01', daysPastDue: 91,
+    borrower: { firstName: 'Fatima', lastName: 'Cassim',        email: 'fatima@example.co.za'  }, product: { name: 'Personal Loan'   },
+    schedule:   makeSchedule('l7', 5000000, 2400, 12, '2025-05-01'),
+    repayments: [
+      { id: 'r7a', receivedAt: '2025-06-01T08:00:00Z', amount: 472500, method: 'EFT' },
+    ],
+  },
+  l8: {
+    id: 'l8', loanNumber: 'LN-2026-00079', status: 'ACTIVE', principal: 4000000, outstandingPrincipal: 3850000, aprBps: 1200, startDate: '2026-04-01', maturityDate: '2028-04-01', daysPastDue: 0,
+    borrower: { firstName: 'Priya',  lastName: 'Naidoo',        email: 'priya@example.co.za'   }, product: { name: 'Business Loan'   },
+    schedule:   makeSchedule('l8', 4000000, 1200, 24, '2026-04-01'),
+    repayments: [
+      { id: 'r8a', receivedAt: '2026-05-01T08:00:00Z', amount: 188000, method: 'EFT' },
+    ],
+  },
+};
+
 export default function LoanDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id }   = use(params);
   const router   = useRouter();
-  const [data,    setData]    = useState<LoanDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [data]    = useState<LoanDetail | null>(DEMO[id] ?? null);
+  const [loading] = useState(false);
+  const [error]   = useState<string | null>(DEMO[id] ? null : 'Loan not found.');
   const [tab,     setTab]     = useState<'schedule' | 'repayments'>('schedule');
-
-  useEffect(() => {
-    fetch(`${API}/api/v1/loans/${id}`, { headers: { Authorization: 'Bearer demo' } })
-      .then(r => r.json())
-      .then(j => { setData(j); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
-  }, [id]);
 
   return (
     <OpsLayout title="Loan Detail">

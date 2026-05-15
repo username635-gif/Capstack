@@ -1,20 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import PartnerLayout           from '@/app/_components/PartnerLayout';
-import { getSession }          from '@/lib/session';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+import { useState } from 'react';
+import PartnerLayout from '@/app/_components/PartnerLayout';
 
 type Credential = {
   id: string; keyId: string; description?: string;
   isActive: boolean; createdAt: string; lastUsedAt?: string | null;
 };
 
+const DEMO_CREDS: Credential[] = [
+  { id: 'ck1', keyId: 'pk_live_partner_001', description: 'Production integration', isActive: true,  createdAt: '2026-04-01', lastUsedAt: '2026-05-14' },
+  { id: 'ck2', keyId: 'pk_live_partner_002', description: 'Mobile app backend',     isActive: true,  createdAt: '2026-04-18', lastUsedAt: '2026-05-13' },
+  { id: 'ck3', keyId: 'pk_test_partner_003', description: 'Staging environment',    isActive: false, createdAt: '2026-03-10', lastUsedAt: '2026-04-30' },
+];
+
 export default function ApiKeysPage() {
-  const [creds,    setCreds]    = useState<Credential[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const [creds,   setCreds]   = useState<Credential[]>(DEMO_CREDS);
+  const [loading]             = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
 
   // New key form
   const [description, setDescription] = useState('');
@@ -24,44 +27,26 @@ export default function ApiKeysPage() {
   // Revoke state
   const [revoking, setRevoking] = useState<string | null>(null);
 
-  function load() {
-    const s = getSession();
-    if (!s) return;
-    setLoading(true);
-    fetch(`${API}/api/v1/api-credentials?partnerId=${s.id}`, { headers: { Authorization: 'Bearer demo' } })
-      .then(r => r.json())
-      .then(j => { setCreds(j.data ?? []); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
-  }
-
-  useEffect(() => { load(); }, []); // eslint-disable-line
-
-  async function createKey() {
-    const s = getSession();
-    if (!s) return;
+  function createKey() {
+    if (!description.trim()) { setError('Please enter a description.'); return; }
     setCreating(true);
-    const res  = await fetch(`${API}/api/v1/api-credentials`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer demo' },
-      body:    JSON.stringify({ partnerId: s.id, description }),
-    });
-    const json = await res.json();
-    setCreating(false);
-    if (!res.ok) { setError(json.error ?? 'Failed to create API key.'); return; }
-    setNewKey({ keyId: json.keyId, secret: json.rawSecret });
-    setDescription('');
-    load();
+    setTimeout(() => {
+      const keyId  = `pk_live_partner_${String(creds.length + 1).padStart(3, '0')}`;
+      const secret = `sk_live_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+      setCreds(prev => [{ id: `ck${Date.now()}`, keyId, description, isActive: true, createdAt: new Date().toISOString().slice(0,10), lastUsedAt: null }, ...prev]);
+      setNewKey({ keyId, secret });
+      setDescription('');
+      setCreating(false);
+    }, 400);
   }
 
-  async function revokeKey(id: string) {
+  function revokeKey(id: string) {
     if (!confirm('Revoke this API key? Applications using it will stop working immediately.')) return;
     setRevoking(id);
-    await fetch(`${API}/api/v1/api-credentials/${id}`, {
-      method:  'DELETE',
-      headers: { Authorization: 'Bearer demo' },
-    });
-    setRevoking(null);
-    load();
+    setTimeout(() => {
+      setCreds(prev => prev.map(c => c.id === id ? { ...c, isActive: false } : c));
+      setRevoking(null);
+    }, 300);
   }
 
   return (

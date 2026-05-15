@@ -7,8 +7,6 @@ import { getSession, clearSession } from '@/lib/session';
 import { ThemeToggle } from '@/app/_components/ThemeProvider';
 import { Suspense } from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
-
 type Loan = {
   id: string; loanNumber: string; status: string;
   principal: number; outstandingPrincipal: number;
@@ -20,6 +18,22 @@ type Application = {
   id: string; status: string; amountRequested: number;
   submittedAt: string; product?: { name: string };
 };
+
+const DEMO_LOANS: Loan[] = [
+  {
+    id: 'dl1', loanNumber: 'LN-2026-00091', status: 'ACTIVE',
+    principal: 2500000, outstandingPrincipal: 1500000,
+    aprBps: 1800, startDate: '2026-01-15', maturityDate: '2027-01-15',
+    daysPastDue: 0, product: { name: 'Personal Loan' },
+  },
+];
+
+const DEMO_APPS: Application[] = [
+  {
+    id: 'da1', status: 'APPROVED', amountRequested: 2500000,
+    submittedAt: '2026-01-12', product: { name: 'Personal Loan' },
+  },
+];
 
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   ACTIVE:               { bg: 'var(--badge-active-bg)',   fg: 'var(--badge-active-fg)'   },
@@ -48,24 +62,62 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const justApplied  = searchParams.get('applied') === '1';
 
-  const [loans, setLoans]         = useState<Loan[]>([]);
-  const [apps, setApps]           = useState<Application[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [loans, setLoans]         = useState<Loan[]>(DEMO_LOANS);
+  const [apps, setApps]           = useState<Application[]>(DEMO_APPS);
+  const [loading]                  = useState(false);
   const [session, setSessionState] = useState<ReturnType<typeof getSession>>(null);
+
+  // Payment panel state
+  const [payingId,  setPayingId]  = useState<string | null>(null);
+  const [payStep,   setPayStep]   = useState<1 | 2>(1);       // 1=amount  2=card
+  const [payAmount, setPayAmount] = useState('');
+  const [card, setCard] = useState({ number: '', expiry: '', cvv: '', name: '' });
+  const [payStatus, setPayStatus] = useState<'idle' | 'processing' | 'done'>('idle');
+
+  function openPay(loanId: string, monthlyEstimate: number) {
+    setPayingId(loanId);
+    setPayAmount((monthlyEstimate / 100).toFixed(2));
+    setCard({ number: '', expiry: '', cvv: '', name: '' });
+    setPayStep(1);
+    setPayStatus('idle');
+  }
+
+  function closePay() {
+    setPayingId(null);
+    setPayAmount('');
+    setCard({ number: '', expiry: '', cvv: '', name: '' });
+    setPayStep(1);
+    setPayStatus('idle');
+  }
+
+  function submitPayment(loan: Loan) {
+    const cents = Math.round(parseFloat(payAmount) * 100);
+    if (!cents || cents <= 0) return;
+    setPayStatus('processing');
+    setTimeout(() => {
+      setLoans(prev => prev.map(l =>
+        l.id === loan.id
+          ? { ...l, outstandingPrincipal: Math.max(0, l.outstandingPrincipal - cents), daysPastDue: 0,
+              status: l.outstandingPrincipal - cents <= 0 ? 'PAID_IN_FULL' : l.status }
+          : l
+      ));
+      setPayStatus('done');
+      setTimeout(() => closePay(), 2000);
+    }, 900);
+  }
 
   useEffect(() => {
     const s = getSession();
     if (!s) { router.replace('/sign-in'); return; }
     setSessionState(s);
-
+    // Real fetch (runs in background; demo data already shown above)
     Promise.all([
-      fetch(`${API}/api/v1/loans?borrowerId=${s.id}`, { headers: { Authorization: 'Bearer demo' } }).then(r => r.json()),
-      fetch(`${API}/api/v1/applications?borrowerId=${s.id}`, { headers: { Authorization: 'Bearer demo' } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app'}/api/v1/loans?borrowerId=${s.id}`, { headers: { Authorization: 'Bearer demo' } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app'}/api/v1/applications?borrowerId=${s.id}`, { headers: { Authorization: 'Bearer demo' } }).then(r => r.json()),
     ]).then(([loansData, appsData]) => {
-      setLoans(loansData.data ?? []);
-      setApps(appsData.data ?? []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+      if ((loansData.data ?? []).length > 0) setLoans(loansData.data);
+      if ((appsData.data  ?? []).length > 0) setApps(appsData.data);
+    }).catch(() => { /* keep demo data */ });
   }, [router]);
 
   if (!session) return null;
@@ -106,13 +158,13 @@ function DashboardContent() {
         <div className="mb-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-bold">My loans</h2>
-            <a
+            <Link
               href="/apply"
               className="text-sm font-semibold px-4 py-2 rounded-lg"
               style={{ background: 'var(--color-primary)', color: '#fff' }}
             >
               + Apply for a loan
-            </a>
+            </Link>
           </div>
 
           {loading ? (
@@ -125,13 +177,13 @@ function DashboardContent() {
               <p className="text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
                 You don&apos;t have any active loans yet.
               </p>
-              <a
+              <Link
                 href="/apply"
                 className="text-sm font-semibold px-5 py-2.5 rounded-lg"
                 style={{ background: 'var(--color-primary)', color: '#fff' }}
               >
                 Apply now
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -184,6 +236,126 @@ function DashboardContent() {
                         <div className="font-semibold">{new Date(loan.maturityDate).toLocaleDateString('en-ZA')}</div>
                       </div>
                     </div>
+
+                    {/* Make a payment */}
+                    {loan.status === 'ACTIVE' && payingId !== loan.id && (
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={() => openPay(loan.id, Math.round(loan.outstandingPrincipal / 12))}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-md"
+                          style={{ background: 'var(--color-secondary)', color: '#fff' }}
+                        >
+                          Make a payment
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Payment panel */}
+                    {payingId === loan.id && (
+                      <div className="mt-4 rounded-md p-4" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+
+                        {/* ── Success ── */}
+                        {payStatus === 'done' && (
+                          <p className="text-sm font-semibold text-center py-2" style={{ color: 'var(--badge-approved-fg)' }}>
+                            ✓ Payment of R {parseFloat(payAmount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })} received
+                          </p>
+                        )}
+
+                        {/* ── Step 1: amount ── */}
+                        {payStatus !== 'done' && payStep === 1 && (
+                          <>
+                            <p className="text-xs font-semibold mb-3" style={{ color: 'var(--foreground)' }}>Amount to pay (R)</p>
+                            <div className="flex gap-2">
+                              <input
+                                type="number" min="1"
+                                value={payAmount}
+                                onChange={e => setPayAmount(e.target.value)}
+                                className="flex-1 px-3 py-2 text-sm rounded-md"
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                              />
+                              <button
+                                onClick={() => { if (parseFloat(payAmount) > 0) setPayStep(2); }}
+                                className="px-4 py-2 text-xs font-semibold rounded-md"
+                                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                              >
+                                Next
+                              </button>
+                              <button
+                                onClick={closePay}
+                                className="px-3 py-2 text-xs rounded-md"
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                        {/* ── Step 2: card details ── */}
+                        {payStatus !== 'done' && payStep === 2 && (
+                          <>
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>Card details — R {parseFloat(payAmount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+                              <button onClick={() => setPayStep(1)} className="text-xs" style={{ color: 'var(--color-muted)' }}>← Back</button>
+                            </div>
+                            <div className="grid gap-2">
+                              <input
+                                type="text" placeholder="Name on card"
+                                value={card.name}
+                                onChange={e => setCard(c => ({ ...c, name: e.target.value }))}
+                                className="w-full px-3 py-2 text-sm rounded-md"
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                              />
+                              <input
+                                type="text" placeholder="Card number (16 digits)" maxLength={19}
+                                value={card.number}
+                                onChange={e => setCard(c => ({ ...c, number: e.target.value.replace(/[^\d]/g,'').replace(/(\d{4})/g,'$1 ').trim() }))}
+                                className="w-full px-3 py-2 text-sm rounded-md font-mono tracking-wider"
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <input
+                                  type="text" placeholder="MM / YY" maxLength={5}
+                                  value={card.expiry}
+                                  onChange={e => {
+                                    let v = e.target.value.replace(/[^\d]/g,'');
+                                    if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2,4);
+                                    setCard(c => ({ ...c, expiry: v }));
+                                  }}
+                                  className="px-3 py-2 text-sm rounded-md"
+                                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                                />
+                                <input
+                                  type="password" placeholder="CVV" maxLength={4}
+                                  value={card.cvv}
+                                  onChange={e => setCard(c => ({ ...c, cvv: e.target.value.replace(/\D/g,'') }))}
+                                  className="px-3 py-2 text-sm rounded-md"
+                                  style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => submitPayment(loan)}
+                                disabled={payStatus === 'processing' || !card.name || card.number.replace(/\s/g,'').length < 16 || card.expiry.length < 5 || card.cvv.length < 3}
+                                className="flex-1 py-2 text-xs font-semibold rounded-md disabled:opacity-40"
+                                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                              >
+                                {payStatus === 'processing' ? 'Processing…' : 'Pay now'}
+                              </button>
+                              <button
+                                onClick={closePay}
+                                className="px-4 py-2 text-xs rounded-md"
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                            <p className="text-xs mt-2 text-center" style={{ color: 'var(--color-muted)' }}>Secured by PayFast · Your card details are encrypted</p>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

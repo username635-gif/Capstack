@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { getSession, clearSession, PartnerSession } from '@/lib/session';
 
 const NAV = [
@@ -66,7 +67,7 @@ export default function PartnerLayout({
                 ? pathname === '/'
                 : pathname.startsWith(item.href);
             return (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
@@ -77,7 +78,7 @@ export default function PartnerLayout({
                 }}
               >
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>

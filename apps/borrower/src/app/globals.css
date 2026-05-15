@@ -72,6 +72,14 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
+  /* Sharper corners throughout */
+  --radius-sm:  2px;
+  --radius:     4px;
+  --radius-md:  5px;
+  --radius-lg:  6px;
+  --radius-xl:  8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
 }
 
 body {
@@ -100,4 +108,13 @@ progress::-webkit-progress-value {
 progress::-moz-progress-bar {
   background: var(--color-progress-fill);
   border-radius: var(--radius-pill);
+}
+
+/* No glow / shadow on buttons */
+button {
+  box-shadow: none;
+}
+button:focus {
+  outline: 2px solid var(--color-border);
+  outline-offset: 2px;
 }

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const stats = [
   { label: "Active loans", value: "1 284", delta: "+12 today" },
   { label: "Pending applications", value: "47", delta: "8 urgent" },
@@ -74,9 +76,9 @@ export default function OpsHome() {
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Dashboard</h1>
           <div className="flex items-center gap-3">
-            <a href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
+            <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
               + New application
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -97,7 +99,7 @@ export default function OpsHome() {
           <div className="rounded-xl overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
               <span className="font-bold">Application queue</span>
-              <a href="/applications" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
+              <Link href="/applications" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</Link>
             </div>
             <table className="w-full text-sm">
               <thead>

@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter }                 from 'next/navigation';
-import OpsLayout                     from '@/app/_components/OpsLayout';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+import { useState, use } from 'react';
+import { useRouter }     from 'next/navigation';
+import OpsLayout         from '@/app/_components/OpsLayout';
 
 type ApplicationDetail = {
   id: string; status: string; amountRequested: number; termMonths: number;
@@ -21,34 +19,72 @@ const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   PENDING_DISBURSEMENT: { bg: 'var(--badge-awaiting-bg)',  fg: 'var(--badge-awaiting-fg)'  },
 };
 
+const DEMO: Record<string, ApplicationDetail> = {
+  a1: {
+    id: 'a1', status: 'SUBMITTED', amountRequested: 2500000, termMonths: 24, submittedAt: '2026-05-14T08:23:00Z',
+    borrower: { id: 'b1', firstName: 'Sipho', lastName: 'Dlamini', email: 'sipho@example.co.za', phone: '+27 82 555 1001', idNumber: '9001015009087', employmentStatus: 'EMPLOYED', monthlyIncome: 3500000, creditScore: 672 },
+    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 1800 },
+  },
+  a2: {
+    id: 'a2', status: 'APPROVED', amountRequested: 12000000, termMonths: 36, submittedAt: '2026-05-13T14:05:00Z',
+    borrower: { id: 'b2', firstName: 'Naledi', lastName: 'Mokoena', email: 'naledi@example.co.za', phone: '+27 71 555 2002', idNumber: '8805105009081', employmentStatus: 'SELF_EMPLOYED', monthlyIncome: 12000000, creditScore: 741 },
+    product:  { name: 'Business Loan', minAmount: 5000000, maxAmount: 50000000, aprBps: 1200 },
+    decision: { id: 'd2', decision: 'APPROVE', pdScore: 0.021, affordabilityRatio: 0.33, decidedAt: '2026-05-13T15:00:00Z' },
+  },
+  a3: {
+    id: 'a3', status: 'PENDING_DISBURSEMENT', amountRequested: 800000, termMonths: 6, submittedAt: '2026-05-13T09:40:00Z',
+    borrower: { id: 'b3', firstName: 'James', lastName: 'van der Merwe', email: 'james@example.co.za', phone: '+27 83 555 3003', idNumber: '9503015009083', employmentStatus: 'EMPLOYED', monthlyIncome: 2500000, creditScore: 598 },
+    product:  { name: 'Short-Term Loan', minAmount: 100000, maxAmount: 2000000, aprBps: 3600 },
+    decision: { id: 'd3', decision: 'APPROVE', pdScore: 0.058, affordabilityRatio: 0.32, decidedAt: '2026-05-13T12:00:00Z' },
+  },
+  a4: {
+    id: 'a4', status: 'REJECTED', amountRequested: 5000000, termMonths: 12, submittedAt: '2026-05-12T16:20:00Z',
+    borrower: { id: 'b4', firstName: 'Fatima', lastName: 'Cassim', email: 'fatima@example.co.za', phone: '+27 79 555 4004', idNumber: '9207205009084', employmentStatus: 'EMPLOYED', monthlyIncome: 1800000, creditScore: 521 },
+    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 2400 },
+    decision: { id: 'd4', decision: 'REJECT', pdScore: 0.142, affordabilityRatio: 0.52, decidedAt: '2026-05-12T17:00:00Z', rejectionReasons: ['Debt-to-income ratio exceeds 40%', 'Affordability check failed'] },
+  },
+  a5: {
+    id: 'a5', status: 'SUBMITTED', amountRequested: 3500000, termMonths: 18, submittedAt: '2026-05-12T11:15:00Z',
+    borrower: { id: 'b5', firstName: 'Thabo', lastName: 'Nkosi', email: 'thabo@example.co.za', phone: '+27 82 555 5005', idNumber: '8812105009085', employmentStatus: 'EMPLOYED', monthlyIncome: 4500000, creditScore: 648 },
+    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 1800 },
+  },
+  a6: {
+    id: 'a6', status: 'APPROVED', amountRequested: 7500000, termMonths: 24, submittedAt: '2026-05-11T10:00:00Z',
+    borrower: { id: 'b6', firstName: 'Lerato', lastName: 'Sithole', email: 'lerato@example.co.za', phone: '+27 71 555 6006', idNumber: '9104105009086', employmentStatus: 'SELF_EMPLOYED', monthlyIncome: 9000000, creditScore: 712 },
+    product:  { name: 'Business Loan', minAmount: 5000000, maxAmount: 50000000, aprBps: 1200 },
+    decision: { id: 'd6', decision: 'APPROVE', pdScore: 0.031, affordabilityRatio: 0.28, decidedAt: '2026-05-11T12:00:00Z' },
+  },
+  a7: {
+    id: 'a7', status: 'SUBMITTED', amountRequested: 1500000, termMonths: 12, submittedAt: '2026-05-11T08:30:00Z',
+    borrower: { id: 'b7', firstName: 'Andile', lastName: 'Zulu', email: 'andile@example.co.za', phone: '+27 83 555 7007', idNumber: '9205055009082', employmentStatus: 'EMPLOYED', monthlyIncome: 2800000, creditScore: 611 },
+    product:  { name: 'Short-Term Loan', minAmount: 100000, maxAmount: 2000000, aprBps: 3600 },
+  },
+  a8: {
+    id: 'a8', status: 'REJECTED', amountRequested: 2000000, termMonths: 6, submittedAt: '2026-05-10T14:45:00Z',
+    borrower: { id: 'b8', firstName: 'Priya', lastName: 'Naidoo', email: 'priya@example.co.za', phone: '+27 79 555 8008', idNumber: '9308205009089', employmentStatus: 'EMPLOYED', monthlyIncome: 2200000, creditScore: 489 },
+    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 2400 },
+    decision: { id: 'd8', decision: 'REJECT', pdScore: 0.198, affordabilityRatio: 0.61, decidedAt: '2026-05-10T16:00:00Z', rejectionReasons: ['Existing default on credit bureau', 'Credit score below minimum threshold'] },
+  },
+};
+
 export default function ApplicationDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id }   = use(params);
   const router   = useRouter();
-  const [data,    setData]    = useState<ApplicationDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const initial  = DEMO[id] ?? null;
+  const [data,    setData]    = useState<ApplicationDetail | null>(initial);
+  const [loading]             = useState(false);
+  const [error]               = useState<string | null>(initial ? null : 'Application not found.');
   const [acting,  setActing]  = useState<'approve' | 'reject' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch(`${API}/api/v1/applications/${id}`, { headers: { Authorization: 'Bearer demo' } })
-      .then(r => r.json())
-      .then(j => { setData(j); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
-  }, [id]);
-
-  async function act(action: 'approve' | 'reject') {
+  function act(action: 'approve' | 'reject') {
     if (!data) return;
     setActing(action);
     setActionError(null);
-    const res = await fetch(`${API}/api/v1/applications/${id}/${action}`, {
-      method:  'POST',
-      headers: { Authorization: 'Bearer demo' },
-    });
-    const json = await res.json();
-    setActing(null);
-    if (!res.ok) { setActionError(json.error ?? 'Action failed.'); return; }
-    setData(prev => prev ? { ...prev, status: action === 'approve' ? 'APPROVED' : 'REJECTED' } : prev);
+    setTimeout(() => {
+      setData(prev => prev ? { ...prev, status: action === 'approve' ? 'APPROVED' : 'REJECTED' } : prev);
+      setActing(null);
+    }, 600);
   }
 
   return (

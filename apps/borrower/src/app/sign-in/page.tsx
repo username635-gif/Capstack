@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { setSession } from '@/lib/session';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
@@ -98,9 +99,9 @@ export default function SignIn() {
 
         <p className="text-xs mt-6 text-center" style={{ color: 'var(--color-muted)' }}>
           Don&apos;t have an account?{' '}
-          <a href="/sign-up" style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
+          <Link href="/sign-up" style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
             Create one
-          </a>
+          </Link>
         </p>
       </div>
     </div>

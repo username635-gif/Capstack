@@ -2,14 +2,43 @@
 
 import { useState } from 'react';
 import PartnerLayout from '@/app/_components/PartnerLayout';
-import { getSession } from '@/lib/session';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
 type ReportType = 'NCR' | 'FICA' | 'NCA' | 'IFRS9';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReportData = Record<string, any>;
+
+const DEMO_REPORTS: Record<ReportType, ReportData> = {
+  NCR: {
+    period: { from: '2026-04-01', to: '2026-05-14' },
+    partnerSummary: { totalLoansIssued: 24, totalDisbursed: 48200000, activeLoans: 18, nplRate: 0.042 },
+    ncrComplaints: { total: 0, resolved: 0, pending: 0 },
+    reportGeneratedAt: new Date().toISOString(),
+  },
+  FICA: {
+    period: { from: '2026-04-01', to: '2026-05-14' },
+    kycSummary: { total: 24, clear: 21, refer: 2, failed: 1, completionRate: 0.875 },
+    sanctionsChecks: { checked: 24, flagged: 0 },
+    reportGeneratedAt: new Date().toISOString(),
+  },
+  NCA: {
+    period: { from: '2026-04-01', to: '2026-05-14' },
+    affordabilityChecks: { completed: 24, passed: 21, failed: 3 },
+    recklessLendingFlags: 0,
+    creditAgreements: { total: 24, withCoolingOff: 24, cancelledInCoolingOff: 0 },
+    reportGeneratedAt: new Date().toISOString(),
+  },
+  IFRS9: {
+    period: { from: '2026-04-01', to: '2026-05-14' },
+    stages: {
+      stage1: { loans: 18, outstandingPrincipal: 3240000, ecl: 47000,   pct: 0.015 },
+      stage2: { loans:  4, outstandingPrincipal:  720000, ecl: 312000,  pct: 0.433 },
+      stage3: { loans:  2, outstandingPrincipal:  240000, ecl: 1840000, pct: 0.767 },
+    },
+    totalEcl: 2199000,
+    reportGeneratedAt: new Date().toISOString(),
+  },
+};
 
 export default function PartnerReports() {
   const [reportType, setReportType] = useState<ReportType>('IFRS9');
@@ -19,22 +48,14 @@ export default function PartnerReports() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
-  async function fetchReport() {
-    const s = getSession();
+  function fetchReport() {
     setLoading(true);
     setError(null);
     setData(null);
-    try {
-      const res  = await fetch(`${API}/api/v1/reports?type=${reportType}&from=${from}&to=${to}`, {
-        headers: { Authorization: 'Bearer demo', ...(s ? { 'x-partner-id': s.id } : {}) },
-      });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error ?? 'Failed.'); setLoading(false); return; }
-      setData(json);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-    setLoading(false);
+    setTimeout(() => {
+      setData(DEMO_REPORTS[reportType]);
+      setLoading(false);
+    }, 300);
   }
 
   return (
