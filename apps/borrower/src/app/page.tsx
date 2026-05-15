@@ -1,16 +1,9 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from './_components/ThemeProvider';
-import { LoanCalculator, CalculatorIcon } from './_components/LoanCalculator';
 
 export default function BorrowerHome() {
-  const [calcOpen, setCalcOpen] = useState(false);
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-
-      <LoanCalculator open={calcOpen} onClose={() => setCalcOpen(false)} />
 
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
@@ -18,24 +11,6 @@ export default function BorrowerHome() {
           <span className="text-lg font-bold tracking-tight">Capstack</span>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            {/* Calculator icon — thin white outline, no fill */}
-            <button
-              onClick={() => setCalcOpen(true)}
-              aria-label="Open loan calculator"
-              title="Loan Calculator"
-              style={{
-                background:   'transparent',
-                border:       '1px solid rgba(255,255,255,0.25)',
-                borderRadius: 8,
-                padding:      '5px 7px',
-                cursor:       'pointer',
-                display:      'flex',
-                alignItems:   'center',
-                lineHeight:   1,
-              }}
-            >
-              <CalculatorIcon size={18} color="var(--foreground)" strokeWidth={1.4} />
-            </button>
             <Link href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</Link>
             <Link
               href="/apply"

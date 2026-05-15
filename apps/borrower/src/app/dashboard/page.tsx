@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSession, clearSession } from '@/lib/session';
 import { ThemeToggle } from '@/app/_components/ThemeProvider';
+import { LoanCalculator, CalculatorIcon, DocumentIcon } from '@/app/_components/LoanCalculator';
 import { Suspense } from 'react';
 
 type Loan = {
@@ -66,6 +67,7 @@ function DashboardContent() {
   const [apps, setApps]           = useState<Application[]>(DEMO_APPS);
   const [loading]                  = useState(false);
   const [session, setSessionState] = useState<ReturnType<typeof getSession>>(null);
+  const [calcOpen, setCalcOpen]    = useState(false);
 
   // Payment panel state
   const [payingId,  setPayingId]  = useState<string | null>(null);
@@ -124,12 +126,41 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+      <LoanCalculator open={calcOpen} onClose={() => setCalcOpen(false)} />
+
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="font-bold text-base tracking-tight">Capstack</Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            {/* Calculator icon */}
+            <button
+              onClick={() => setCalcOpen(true)}
+              aria-label="Open loan calculator"
+              title="Loan Calculator"
+              style={{
+                background: 'transparent', border: '1px solid var(--color-border)',
+                borderRadius: 8, padding: '5px 7px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', lineHeight: 1,
+              }}
+            >
+              <CalculatorIcon size={18} color="var(--foreground)" strokeWidth={1.4} />
+            </button>
+            {/* PDF downloads */}
+            <Link
+              href="/downloads"
+              aria-label="Download documents"
+              title="Download PDFs"
+              style={{
+                background: 'transparent', border: '1px solid var(--color-border)',
+                borderRadius: 8, padding: '5px 7px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', lineHeight: 1,
+                textDecoration: 'none',
+              }}
+            >
+              <DocumentIcon size={18} color="var(--foreground)" strokeWidth={1.4} />
+            </Link>
             <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
               Hi, {session.name.split(' ')[0]}
             </span>

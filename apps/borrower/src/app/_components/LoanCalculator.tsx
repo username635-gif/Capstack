@@ -334,3 +334,37 @@ export function CalculatorIcon({
     </svg>
   );
 }
+
+// ─── Document / PDF icon (thin lines, no fill) ────────────────────────────────
+
+export function DocumentIcon({
+  size = 22,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+}: {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label="Download PDF"
+    >
+      {/* Page body */}
+      <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+      {/* Folded corner */}
+      <polyline points="14 2 14 8 20 8" />
+      {/* Text lines */}
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="13" y2="17" />
+    </svg>
+  );
+}

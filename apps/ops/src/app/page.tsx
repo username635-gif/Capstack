@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link         from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LoanCalculator, CalculatorIcon } from '@/app/_components/LoanCalculator';
+import { LoanCalculator, CalculatorIcon, DocumentIcon } from '@/app/_components/LoanCalculator';
 
 const stats = [
   { label: "Active loans", value: "1 284", delta: "+12 today" },
@@ -70,6 +70,27 @@ export default function OpsHome() {
             </a>
           ))}
         </nav>
+
+        {/* Tools — calculator + PDF in sidebar */}
+        <div className="p-3 flex flex-col gap-1" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <button
+            onClick={() => setCalcOpen(true)}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-left"
+            style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", cursor: "pointer" }}
+          >
+            <CalculatorIcon size={15} color="var(--color-muted)" strokeWidth={1.4} />
+            Loan calculator
+          </button>
+          <a
+            href="/downloads"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
+            style={{ background: "transparent", border: "1px solid transparent", color: "var(--color-muted)", textDecoration: "none" }}
+          >
+            <DocumentIcon size={15} color="var(--color-muted)" strokeWidth={1.4} />
+            Download reports
+          </a>
+        </div>
+
         <div className="p-4" style={{ borderTop: "1px solid var(--color-border)" }}>
           <div className="text-xs" style={{ color: "var(--color-muted)" }}>Logged in as</div>
           <div className="text-sm font-semibold mt-0.5">Admin User</div>
@@ -84,24 +105,6 @@ export default function OpsHome() {
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Dashboard</h1>
           <div className="flex items-center gap-3">
-            {/* Calculator icon — thin lines */}
-            <button
-              onClick={() => setCalcOpen(true)}
-              aria-label="Open loan calculator"
-              title="Loan Calculator"
-              style={{
-                background:   'transparent',
-                border:       '1px solid var(--color-border)',
-                borderRadius: 8,
-                padding:      '5px 7px',
-                cursor:       'pointer',
-                display:      'flex',
-                alignItems:   'center',
-                lineHeight:   1,
-              }}
-            >
-              <CalculatorIcon size={18} color="var(--color-muted)" strokeWidth={1.4} />
-            </button>
             <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
               + New application
             </Link>
