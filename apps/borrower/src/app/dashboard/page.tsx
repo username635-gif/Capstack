@@ -2,7 +2,9 @@
 
 import { useState, useEffect }    from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { getSession, clearSession } from '@/lib/session';
+import { ThemeToggle } from '@/app/_components/ThemeProvider';
 import { Suspense } from 'react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
@@ -73,8 +75,9 @@ function DashboardContent() {
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="font-bold text-base tracking-tight">Capstack</a>
-          <div className="flex items-center gap-4">
+          <Link href="/" className="font-bold text-base tracking-tight">Capstack</Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
             <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
               Hi, {session.name.split(' ')[0]}
             </span>

@@ -1,3 +1,6 @@
+import Link from 'next/link';
+import { ThemeToggle } from './_components/ThemeProvider';
+
 const partnerStats = [
   { label: "Loans originated", value: "342", delta: "+18 this month" },
   { label: "Portfolio value", value: "R 8.4M", delta: "+R 640k this month" },
@@ -33,7 +36,7 @@ export default function PartnerHome() {
         </div>
         <nav className="flex flex-col gap-1 p-3 flex-1">
           {navItems.map((item, i) => (
-            <a
+            <Link
               key={item.label}
               href={item.href}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
@@ -44,10 +47,11 @@ export default function PartnerHome() {
               }}
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
-        <div className="p-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+        <div className="p-4 flex flex-col gap-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <ThemeToggle />
           <div className="text-xs" style={{ color: "var(--color-muted)" }}>Partner</div>
           <div className="text-sm font-semibold mt-0.5">First National Finance</div>
         </div>
@@ -59,9 +63,11 @@ export default function PartnerHome() {
         {/* Top bar */}
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Portfolio overview</h1>
-          <a href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
-            + Originate loan
-          </a>
+          <div className="flex items-center gap-3">
+            <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
+              + Originate loan
+            </Link>
+          </div>
         </header>
 
         <main className="flex-1 overflow-auto p-8">

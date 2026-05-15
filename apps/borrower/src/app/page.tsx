@@ -1,3 +1,6 @@
+import Link from 'next/link';
+import { ThemeToggle } from './_components/ThemeProvider';
+
 export default function BorrowerHome() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--foreground)" }}>
@@ -6,15 +9,16 @@ export default function BorrowerHome() {
       <nav style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="text-lg font-bold tracking-tight">Capstack</span>
-          <div className="flex items-center gap-4">
-            <a href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</a>
-            <a
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</Link>
+            <Link
               href="/apply"
               className="text-sm font-semibold px-4 py-2 rounded-lg"
               style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}
             >
               Apply now
-            </a>
+            </Link>
           </div>
         </div>
       </nav>

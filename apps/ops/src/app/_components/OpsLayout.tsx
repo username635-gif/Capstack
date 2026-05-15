@@ -16,7 +16,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { getSession, clearSession, OpsSession } from '@/lib/session';
+import { ThemeToggle } from './ThemeProvider';
 
 const NAV = [
   { label: 'Dashboard',    href: '/' },
@@ -75,7 +77,7 @@ export default function OpsLayout({
                 ? pathname === '/'
                 : pathname.startsWith(item.href);
             return (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
@@ -86,18 +88,19 @@ export default function OpsLayout({
                 }}
               >
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>
 
-        <div className="p-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="p-4 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <ThemeToggle />
           <div className="text-xs" style={{ color: 'var(--color-muted)' }}>Signed in as</div>
           <div className="text-sm font-semibold mt-0.5">{session.name}</div>
           <div className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>{session.role}</div>
           <button
             onClick={() => { clearSession(); router.push('/sign-in'); }}
-            className="text-xs mt-3 font-medium"
+            className="text-xs mt-1 font-medium text-left"
             style={{ color: 'var(--color-danger)' }}
           >
             Sign out

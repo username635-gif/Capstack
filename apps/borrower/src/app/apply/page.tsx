@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
+import Link from 'next/link';
 import { getSession }          from '@/lib/session';
+import { ThemeToggle }         from '@/app/_components/ThemeProvider';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
@@ -75,8 +77,11 @@ export default function Apply() {
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="font-bold text-base tracking-tight">Capstack</a>
-          <a href="/dashboard" className="text-sm" style={{ color: 'var(--color-muted)' }}>My dashboard</a>
+          <Link href="/" className="font-bold text-base tracking-tight">Capstack</Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link href="/dashboard" className="text-sm" style={{ color: 'var(--color-muted)' }}>My dashboard</Link>
+          </div>
         </div>
       </nav>
 
