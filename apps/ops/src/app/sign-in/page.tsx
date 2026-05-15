@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { setSession } from '@/lib/session';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+const DEMO_EMAIL = 'ops@capstack.demo';
 
 export default function StaffSignIn() {
   const router   = useRouter();
@@ -53,6 +54,17 @@ export default function StaffSignIn() {
           <div className="font-extrabold text-2xl tracking-tight mb-1">Capstack Ops</div>
           <div className="text-sm" style={{ color: 'var(--color-muted)' }}>Sign in to the operations portal</div>
         </div>
+
+        {/* Demo credentials banner */}
+        <button
+          type="button"
+          onClick={() => setEmail(DEMO_EMAIL)}
+          className="w-full text-left px-4 py-3 rounded-lg mb-5 text-sm"
+          style={{ background: 'rgba(0,180,120,0.08)', border: '1px dashed var(--color-secondary)', color: 'var(--color-secondary)' }}
+        >
+          <span className="font-semibold">⚡ Demo mode</span> — click to fill demo credentials<br />
+          <span style={{ color: 'var(--color-muted)', fontSize: '0.75rem' }}>{DEMO_EMAIL}</span>
+        </button>
 
         {error && (
           <div

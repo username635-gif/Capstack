@@ -17,6 +17,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
 
+const DEMO_MODE = !process.env.DATABASE_URL;
+const DEMO_EMAIL = 'ops@capstack.demo';
+
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try { return [null, await p]; }
   catch (err) { return [err instanceof Error ? err : new Error(String(err)), null]; }
@@ -28,6 +31,24 @@ export async function POST(req: NextRequest) {
 
   const { email } = body ?? {};
   if (!email) return NextResponse.json({ error: 'email is required' }, { status: 400 });
+
+  // Demo mode — only the demo email works; no DB required
+  if (DEMO_MODE) {
+    if (email.toLowerCase() !== DEMO_EMAIL) {
+      return NextResponse.json(
+        { error: `Demo mode: use ${DEMO_EMAIL} to sign in` },
+        { status: 401 },
+      );
+    }
+    return NextResponse.json({
+      id:     'demo_staff_001',
+      email:  DEMO_EMAIL,
+      name:   'Demo Advisor',
+      role:   'ADMIN',
+      lender: { id: 'demo_lender_001', name: 'Capstack Demo' },
+      type:   'staff',
+    });
+  }
 
   const [err, staff] = await to(
     prisma.staff.findUnique({
