@@ -135,17 +135,17 @@ export default function ApplicationDetail({ params }: { params: Promise<{ id: st
                 onClick={() => act('approve')}
                 disabled={acting !== null}
                 className="flex-1 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--badge-approved-bg)', color: 'var(--badge-approved-fg)', border: '1px solid #a7f3d0' }}
+                style={{ background: 'var(--color-primary)', color: '#fff', border: 'none' }}
               >
-                {acting === 'approve' ? 'Approving…' : '✓ Approve'}
+                {acting === 'approve' ? 'Approving…' : 'Approve'}
               </button>
               <button
                 onClick={() => act('reject')}
                 disabled={acting !== null}
                 className="flex-1 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)', border: '1px solid #fca5a5' }}
+                style={{ background: 'var(--color-surface-2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
               >
-                {acting === 'reject' ? 'Declining…' : '✕ Decline'}
+                {acting === 'reject' ? 'Declining…' : 'Decline'}
               </button>
             </div>
           )}

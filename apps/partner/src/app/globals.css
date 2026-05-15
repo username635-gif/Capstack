@@ -110,9 +110,10 @@ progress::-moz-progress-bar {
 }
 
 button {
-  box-shadow: none;
+  box-shadow: none !important;
+  outline: none !important;
 }
-button:focus {
-  outline: 2px solid var(--color-border);
+button:focus-visible {
+  outline: 2px solid var(--color-border) !important;
   outline-offset: 2px;
 }
