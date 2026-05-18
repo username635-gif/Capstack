@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { MeshPatternOverlay } from './MeshPatternOverlay';
 
 const PARTICLE_COUNT = 70;
 const LINE_DISTANCE = 130;
@@ -31,19 +32,19 @@ function getCanvasPalette(mode: 'light' | 'dark') {
     return {
       nodeColor: 'rgba(255, 255, 255, 0.30)',
       lineRgb: '255, 255, 255',
-      lineMaxAlpha: 0.12,
+      lineMaxAlpha: 0.15,
       mouseRgb: '92, 219, 122',
-      mouseLineMaxAlpha: 0.18,
+      mouseLineMaxAlpha: 0.2,
       glowInner: 'rgba(92, 219, 122, 0.07)',
     };
   }
 
   return {
-    nodeColor: 'rgba(0, 0, 0, 0.22)',
+    nodeColor: 'rgba(0, 0, 0, 0.26)',
     lineRgb: '0, 0, 0',
-    lineMaxAlpha: 0.10,
+    lineMaxAlpha: 0.13,
     mouseRgb: '0, 0, 0',
-    mouseLineMaxAlpha: 0.22,
+    mouseLineMaxAlpha: 0.24,
     glowInner: 'rgba(0, 0, 0, 0.05)',
   };
 }
@@ -266,6 +267,8 @@ export function InteractiveMeshSurface({
         ...style,
       }}
     >
+      <MeshPatternOverlay mode={themeMode} />
+
       <canvas
         ref={canvasRef}
         aria-hidden="true"
@@ -275,7 +278,7 @@ export function InteractiveMeshSurface({
           left: 0,
           width: '100%',
           height: '100%',
-          zIndex: 0,
+          zIndex: 1,
           pointerEvents: 'none',
         }}
       />
