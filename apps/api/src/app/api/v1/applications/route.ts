@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
       : { submittedAt: sortDirection };
 
   const [err, result] = await to(
-    prisma.$transaction([
+    Promise.all([
       prisma.application.findMany({
         where,
         select: {
@@ -293,16 +293,25 @@ export async function GET(req: NextRequest) {
         skip,
       }),
       prisma.application.count({ where }),
-      prisma.application.count({ where: buildWorkflowWhere('ALL', baseWhere) }),
-      prisma.application.count({ where: buildWorkflowWhere('SUBMITTED', baseWhere) }),
+      prisma.application.groupBy({
+        by: ['status'],
+        where: buildWorkflowWhere('ALL', baseWhere),
+        _count: { _all: true },
+      }),
       prisma.application.count({ where: buildWorkflowWhere('APPROVED', baseWhere) }),
-      prisma.application.count({ where: buildWorkflowWhere('REJECTED', baseWhere) }),
       prisma.application.count({ where: buildWorkflowWhere('PENDING_DISBURSEMENT', baseWhere) }),
     ]),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
-  const [applications, total, allCount, submittedCount, approvedCount, rejectedCount, pendingCount] = result!;
+  const [applications, total, groupedStatusCounts, approvedCount, pendingCount] = result!;
+  const countsByStatus = groupedStatusCounts.reduce<Record<string, number>>((accumulator, item) => {
+    accumulator[item.status] = item._count._all;
+    return accumulator;
+  }, {});
+  const allCount = Object.values(countsByStatus).reduce((sum, count) => sum + count, 0);
+  const submittedCount = REVIEW_QUEUE_STATUSES.reduce((sum, status) => sum + (countsByStatus[status] ?? 0), 0);
+  const rejectedCount = countsByStatus.REJECTED ?? 0;
   const borrowerIds = [...new Set(applications.map((application) => application.borrowerId))];
   const [amlErr, amlAlerts] = borrowerIds.length === 0
     ? [null, [] as Array<{ borrowerId: string | null; severity: string; type: string }>]
