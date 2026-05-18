@@ -4,6 +4,10 @@ A full-stack lending-as-a-service (LaaS) monorepo built with Turborepo, Next.js,
 
 Capstack provides the infrastructure for originating, servicing, and collecting on consumer and SME loans — including credit decisioning, KYC/AML, open banking, and double-entry ledger accounting.
 
+## System Guide
+
+For a current inventory of what is actually implemented in the repo, read [docs/implemented-features.md](docs/implemented-features.md).
+
 ---
 
 ## Architecture
