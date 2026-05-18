@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect }    from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSession, clearSession } from '@/lib/session';
@@ -18,6 +18,7 @@ type Loan = {
 type Application = {
   id: string; status: string; amountRequested: number;
   submittedAt: string; product?: { name: string };
+  approvedAmount?: number; approvedAprBps?: number; approvedTermDays?: number;
 };
 
 const DEMO_LOANS: Loan[] = [
@@ -33,6 +34,7 @@ const DEMO_APPS: Application[] = [
   {
     id: 'da1', status: 'APPROVED', amountRequested: 2500000,
     submittedAt: '2026-01-12', product: { name: 'Personal Loan' },
+    approvedAmount: 2500000, approvedAprBps: 1800, approvedTermDays: 365,
   },
 ];
 
@@ -75,6 +77,53 @@ function DashboardContent() {
   const [payAmount, setPayAmount] = useState('');
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [payStatus, setPayStatus] = useState<'idle' | 'processing' | 'done'>('idle');
+  const [expandedApp, setExpandedApp] = useState<string | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+
+  function fmt(d: string) {
+    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrapper = wrapperRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !wrapper || !ctx) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const nodeColor = dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.14)';
+    const lineRgb = dark ? '255,255,255' : '0,0,0';
+    const dpr = Math.max(window.devicePixelRatio || 1, 1);
+    const COUNT = 50, LINE_DIST = 140;
+    let w = 0, h = 0, raf = 0;
+    const pts: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
+    const resize = () => {
+      w = wrapper.clientWidth; h = wrapper.clientHeight;
+      canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
+      canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!pts.length) for (let i = 0; i < COUNT; i++) pts.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4, r: 1 + Math.random() });
+    };
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
+          if (d < LINE_DIST) { ctx.strokeStyle = `rgba(${lineRgb},${(1 - d / LINE_DIST) * .1})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke(); }
+        }
+        ctx.fillStyle = nodeColor; ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, pts[i].r, 0, Math.PI * 2); ctx.fill();
+        pts[i].x += pts[i].vx; pts[i].y += pts[i].vy;
+        if (pts[i].x < 0 || pts[i].x > w) pts[i].vx *= -1;
+        if (pts[i].y < 0 || pts[i].y > h) pts[i].vy *= -1;
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    resize(); draw();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    ro ? ro.observe(wrapper) : window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); ro ? ro.disconnect() : window.removeEventListener('resize', resize); };
+  }, []);
 
   function openPay(loanId: string, monthlyEstimate: number) {
     setPayingId(loanId);
@@ -125,11 +174,12 @@ function DashboardContent() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+    <div ref={wrapperRef} className="min-h-screen flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)', position: 'relative' }}>
+      <canvas ref={canvasRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }} />
       <LoanCalculator open={calcOpen} onClose={() => setCalcOpen(false)} />
 
       {/* Nav */}
-      <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+      <nav style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', position: 'relative', zIndex: 1 }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="font-bold text-base tracking-tight">Capstack</Link>
           <div className="flex items-center gap-3">
@@ -175,7 +225,7 @@ function DashboardContent() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto w-full px-6 py-10">
+      <div className="max-w-5xl mx-auto w-full px-6 py-10" style={{ position: 'relative', zIndex: 1 }}>
         {justApplied && (
           <div
             className="rounded-xl px-5 py-4 mb-8 text-sm font-medium"
@@ -260,11 +310,11 @@ function DashboardContent() {
                       </div>
                       <div>
                         <div style={{ color: 'var(--color-muted)' }}>Start date</div>
-                        <div className="font-semibold">{new Date(loan.startDate).toLocaleDateString('en-ZA')}</div>
+                        <div className="font-semibold">{fmt(loan.startDate)}</div>
                       </div>
                       <div>
                         <div style={{ color: 'var(--color-muted)' }}>Maturity</div>
-                        <div className="font-semibold">{new Date(loan.maturityDate).toLocaleDateString('en-ZA')}</div>
+                        <div className="font-semibold">{fmt(loan.maturityDate)}</div>
                       </div>
                     </div>
 
@@ -402,21 +452,71 @@ function DashboardContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    {['Product', 'Amount', 'Submitted', 'Status'].map(h => (
+                    {['Product', 'Amount', 'Submitted', 'Status', ''].map(h => (
                       <th key={h} className="text-left px-5 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {apps.map((a, i) => (
-                    <tr key={a.id} style={{ borderBottom: i < apps.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                      <td className="px-5 py-3 font-medium">{a.product?.name ?? '—'}</td>
-                      <td className="px-5 py-3 font-semibold">R {(a.amountRequested / 100).toLocaleString()}</td>
-                      <td className="px-5 py-3" style={{ color: 'var(--color-muted)' }}>
-                        {new Date(a.submittedAt).toLocaleDateString('en-ZA')}
-                      </td>
-                      <td className="px-5 py-3">{badge(a.status)}</td>
-                    </tr>
+                    <React.Fragment key={a.id}>
+                      <tr style={{ borderBottom: expandedApp === a.id ? 'none' : i < apps.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                        <td className="px-5 py-3 font-medium">{a.product?.name ?? '—'}</td>
+                        <td className="px-5 py-3 font-semibold">R {(a.amountRequested / 100).toLocaleString()}</td>
+                        <td className="px-5 py-3" style={{ color: 'var(--color-muted)' }}>{fmt(a.submittedAt)}</td>
+                        <td className="px-5 py-3">{badge(a.status)}</td>
+                        <td className="px-5 py-3">
+                          <button
+                            onClick={() => setExpandedApp(expandedApp === a.id ? null : a.id)}
+                            className="text-xs font-semibold px-3 py-1 rounded-md"
+                            style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', cursor: 'pointer' }}
+                          >
+                            {expandedApp === a.id ? 'Close' : 'View'}
+                          </button>
+                        </td>
+                      </tr>
+                      {expandedApp === a.id && (
+                        <tr style={{ borderBottom: i < apps.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                          <td colSpan={5} className="px-5 py-4" style={{ background: 'var(--color-surface-2)' }}>
+                            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+                              <div>
+                                <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>Requested</div>
+                                <div className="font-semibold">R {(a.amountRequested / 100).toLocaleString()}</div>
+                              </div>
+                              {a.approvedAmount != null && (
+                                <div>
+                                  <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>Approved amount</div>
+                                  <div className="font-semibold">R {(a.approvedAmount / 100).toLocaleString()}</div>
+                                </div>
+                              )}
+                              {a.approvedAprBps != null && (
+                                <div>
+                                  <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>Interest rate</div>
+                                  <div className="font-semibold">{(a.approvedAprBps / 100).toFixed(1)}% APR</div>
+                                </div>
+                              )}
+                              {a.approvedTermDays != null && (
+                                <div>
+                                  <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>Term</div>
+                                  <div className="font-semibold">{Math.round(a.approvedTermDays / 30)} months</div>
+                                </div>
+                              )}
+                            </div>
+                            <p className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--badge-approved-bg)', color: 'var(--badge-approved-fg)' }}>
+                              {a.status === 'APPROVED'
+                                ? '✓ Your application has been approved. Funds will be disbursed to your account within 24 hours.'
+                                : a.status === 'PENDING_DISBURSEMENT'
+                                ? 'Approved — funds are being transferred to your account now.'
+                                : a.status === 'SUBMITTED'
+                                ? "Your application is under review. We'll update you within 4 hours."
+                                : a.status === 'REJECTED'
+                                ? 'This application was not approved. Contact support for more information.'
+                                : `Status: ${a.status.replace(/_/g, ' ')}`}
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -425,7 +525,7 @@ function DashboardContent() {
         )}
       </div>
 
-      <footer style={{ borderTop: '1px solid var(--color-border)', marginTop: 'auto' }}>
+      <footer style={{ borderTop: '1px solid var(--color-border)', marginTop: 'auto', position: 'relative', zIndex: 1 }}>
         <div className="max-w-5xl mx-auto px-6 py-5 flex justify-between text-xs" style={{ color: 'var(--color-muted)' }}>
           <span>© 2026 Capstack Financial Services</span>
           <span>NCR Registered · FSP registration pending</span>
