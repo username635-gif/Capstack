@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { getSession } from '@/lib/session';
-import { buildOpsApiHeaders } from '@/lib/api-client';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+import { API_BASE_URL as API, buildOpsApiHeaders } from '@/lib/api-client';
 
 type WorkflowStatus = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
 type SortKey = 'amountRequested' | 'termDaysRequested' | 'submittedAt';

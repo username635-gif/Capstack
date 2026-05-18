@@ -17,8 +17,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
 
-const DEMO_MODE = !process.env.DATABASE_URL;
 const DEMO_EMAIL = 'ops@capstack.demo';
+const DEMO_STAFF_SESSION = {
+  id:     'demo_staff_001',
+  email:  DEMO_EMAIL,
+  name:   'Demo Advisor',
+  role:   'ADMIN',
+  lender: { id: 'demo_lender_001', name: 'Capstack Demo' },
+  type:   'staff',
+} as const;
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try { return [null, await p]; }
@@ -32,22 +39,21 @@ export async function POST(req: NextRequest) {
   const { email } = body ?? {};
   if (!email) return NextResponse.json({ error: 'email is required' }, { status: 400 });
 
+  const normalizedEmail = email.toLowerCase();
+
   // Demo mode — only the demo email works; no DB required
-  if (DEMO_MODE) {
-    if (email.toLowerCase() !== DEMO_EMAIL) {
+  if (shouldAllowDemoStaffAccess() && normalizedEmail === DEMO_EMAIL) {
+    return NextResponse.json(DEMO_STAFF_SESSION);
+  }
+
+  if (!process.env.DATABASE_URL) {
+    if (normalizedEmail !== DEMO_EMAIL) {
       return NextResponse.json(
         { error: 'Demo access is restricted to the provisioned internal account.' },
         { status: 401 },
       );
     }
-    return NextResponse.json({
-      id:     'demo_staff_001',
-      email:  DEMO_EMAIL,
-      name:   'Demo Advisor',
-      role:   'ADMIN',
-      lender: { id: 'demo_lender_001', name: 'Capstack Demo' },
-      type:   'staff',
-    });
+    return NextResponse.json(DEMO_STAFF_SESSION);
   }
 
   const [err, staff] = await to(
@@ -67,4 +73,11 @@ export async function POST(req: NextRequest) {
     lender: { id: staff.lenderId, name: staff.lender.name },
     type:   'staff',
   });
+}
+
+function shouldAllowDemoStaffAccess(): boolean {
+  const authMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE?.trim().toLowerCase();
+  const hasConfiguredSecret = Boolean(process.env.OPS_INTERNAL_AUTH_SECRET?.trim());
+
+  return authMode === 'demo' || !hasConfiguredSecret || !process.env.DATABASE_URL;
 }

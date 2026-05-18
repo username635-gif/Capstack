@@ -36,22 +36,15 @@ async function authorize(
     };
   }
 
-  if (!getOpsAuthSharedSecret()) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: `Ops API auth is not configured. ${OPS_AUTH_CONFIG_HINT}` },
-        { status: 503 },
-      ),
-    };
-  }
-
   const token = authHeader.slice('Bearer '.length).trim();
   const verified = await verifyOpsAccessToken(token);
   if (!verified) {
     return {
       ok: false,
-      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+      response: NextResponse.json(
+        { error: getOpsAuthSharedSecret() ? 'Unauthorized' : `Unauthorized. ${OPS_AUTH_CONFIG_HINT}` },
+        { status: getOpsAuthSharedSecret() ? 401 : 503 },
+      ),
     };
   }
 

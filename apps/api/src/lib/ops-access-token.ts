@@ -24,21 +24,30 @@ export type VerifiedOpsAccessToken = {
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+const DEV_FALLBACK_SECRET = 'capstack-dev-ops-auth-secret';
+const DEMO_FALLBACK_SECRET = 'capstack-demo-ops-auth-secret';
+const DEMO_IDENTITY = {
+  staffId: 'demo_staff_001',
+  email: 'ops@capstack.demo',
+  actor: 'Demo Advisor',
+  role: 'ADMIN',
+  lenderId: 'demo_lender_001',
+  lenderName: 'Capstack Demo',
+} as const;
 
 export function getOpsAuthSharedSecret(): string | null {
-  const configured = process.env.OPS_INTERNAL_AUTH_SECRET?.trim();
+  const configured = getConfiguredOpsAuthSharedSecret();
   if (configured) {
     return configured;
   }
 
   return process.env.NODE_ENV === 'production'
     ? null
-    : 'capstack-dev-ops-auth-secret';
+    : DEV_FALLBACK_SECRET;
 }
 
 export async function verifyOpsAccessToken(token: string | null | undefined): Promise<VerifiedOpsAccessToken | null> {
-  const secret = getOpsAuthSharedSecret();
-  if (!secret || !token) {
+  if (!token) {
     return null;
   }
 
@@ -47,37 +56,71 @@ export async function verifyOpsAccessToken(token: string | null | undefined): Pr
     return null;
   }
 
-  const isValid = await verifySignature(encodedPayload, signature, secret);
-  if (!isValid) {
-    return null;
+  for (const secret of getVerificationSecrets()) {
+    const isValid = await verifySignature(encodedPayload, signature, secret);
+    if (!isValid) {
+      continue;
+    }
+
+    const payload = parsePayload(encodedPayload);
+    if (!payload) {
+      continue;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (!Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) || payload.exp <= now) {
+      continue;
+    }
+
+    if (payload.v !== '1' || payload.typ !== 'ops-api' || payload.iss !== 'capstack-ops' || payload.aud !== 'capstack-api') {
+      continue;
+    }
+
+    if (!payload.sub || !payload.email.includes('@') || !payload.name || !payload.role || !payload.lenderId || !payload.lenderName) {
+      continue;
+    }
+
+    if (secret === DEMO_FALLBACK_SECRET && !isDemoPayload(payload)) {
+      continue;
+    }
+
+    return {
+      staffId: payload.sub,
+      email: payload.email,
+      actor: payload.name,
+      role: payload.role,
+      lenderId: payload.lenderId,
+      lenderName: payload.lenderName,
+    };
   }
 
-  const payload = parsePayload(encodedPayload);
-  if (!payload) {
-    return null;
+  return null;
+}
+
+function getConfiguredOpsAuthSharedSecret(): string | null {
+  return process.env.OPS_INTERNAL_AUTH_SECRET?.trim() || null;
+}
+
+function getVerificationSecrets(): string[] {
+  const configured = getConfiguredOpsAuthSharedSecret();
+  if (configured) {
+    return [configured];
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  if (!Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) || payload.exp <= now) {
-    return null;
-  }
+  return process.env.NODE_ENV === 'production'
+    ? [DEMO_FALLBACK_SECRET]
+    : [DEV_FALLBACK_SECRET, DEMO_FALLBACK_SECRET];
+}
 
-  if (payload.v !== '1' || payload.typ !== 'ops-api' || payload.iss !== 'capstack-ops' || payload.aud !== 'capstack-api') {
-    return null;
-  }
-
-  if (!payload.sub || !payload.email.includes('@') || !payload.name || !payload.role || !payload.lenderId || !payload.lenderName) {
-    return null;
-  }
-
-  return {
-    staffId: payload.sub,
-    email: payload.email,
-    actor: payload.name,
-    role: payload.role,
-    lenderId: payload.lenderId,
-    lenderName: payload.lenderName,
-  };
+function isDemoPayload(payload: SignedApiPayload): boolean {
+  return (
+    payload.sub === DEMO_IDENTITY.staffId &&
+    payload.email === DEMO_IDENTITY.email &&
+    payload.name === DEMO_IDENTITY.actor &&
+    payload.role === DEMO_IDENTITY.role &&
+    payload.lenderId === DEMO_IDENTITY.lenderId &&
+    payload.lenderName === DEMO_IDENTITY.lenderName
+  );
 }
 
 function parsePayload(encodedPayload: string): SignedApiPayload | null {

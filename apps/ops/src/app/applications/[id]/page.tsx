@@ -3,9 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OpsLayout from '@/app/_components/OpsLayout';
-import { buildOpsApiHeaders } from '@/lib/api-client';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+import { API_BASE_URL as API, buildOpsApiHeaders } from '@/lib/api-client';
 
 type WorkflowStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
 type SlaStatus = 'WITHIN_SLA' | 'BREACH_SOON' | 'BREACHED';

@@ -1,4 +1,5 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+// Browser calls stay same-origin and are forwarded by the ops proxy route.
+export const API_BASE_URL = '/api/proxy';
 
 type OpsAccessTokenResponse = {
   accessToken: string;
