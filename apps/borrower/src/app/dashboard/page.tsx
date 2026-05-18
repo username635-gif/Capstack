@@ -123,7 +123,7 @@ function DashboardContent() {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
     ro ? ro.observe(wrapper) : window.addEventListener('resize', resize);
     return () => { cancelAnimationFrame(raf); ro ? ro.disconnect() : window.removeEventListener('resize', resize); };
-  }, []);
+  }, [session]);
 
   function openPay(loanId: string, monthlyEstimate: number) {
     setPayingId(loanId);
