@@ -123,7 +123,7 @@ function DashboardContent() {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
     ro ? ro.observe(wrapper) : window.addEventListener('resize', resize);
     return () => { cancelAnimationFrame(raf); ro ? ro.disconnect() : window.removeEventListener('resize', resize); };
-  }, [session]);
+  }, []);
 
   function openPay(loanId: string, monthlyEstimate: number) {
     setPayingId(loanId);
@@ -171,8 +171,6 @@ function DashboardContent() {
     }).catch(() => { /* keep demo data */ });
   }, [router]);
 
-  if (!session) return null;
-
   return (
     <div ref={wrapperRef} className="min-h-screen flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)', position: 'relative' }}>
       <canvas ref={canvasRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }} />
@@ -212,7 +210,7 @@ function DashboardContent() {
               <DocumentIcon size={18} color="var(--foreground)" strokeWidth={1.4} />
             </Link>
             <span className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              Hi, {session.name.split(' ')[0]}
+              Hi, {session?.name?.split(' ')[0] ?? ''}
             </span>
             <button
               onClick={() => { clearSession(); router.push('/sign-in'); }}
