@@ -89,7 +89,7 @@ export default function PartnerReports() {
           </div>
           <button onClick={fetchReport} disabled={loading}
             className="px-7 py-3 rounded-lg text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
-            style={{ background: 'var(--color-primary)', color: '#fff' }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
           >
             {loading ? 'Generating…' : 'Generate'}
           </button>

@@ -215,7 +215,7 @@ export default function SignUp() {
               <button
                 type="submit"
                 className="w-full text-sm font-semibold py-2.5 rounded-lg mt-2"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
               >
                 Continue to application
               </button>
@@ -282,7 +282,7 @@ export default function SignUp() {
                   type="submit"
                   disabled={loading}
                   className="flex-1 text-sm font-semibold py-2.5 rounded-lg"
-                  style={{ background: 'var(--color-primary)', color: '#fff', opacity: loading ? 0.7 : 1 }}
+                  style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', opacity: loading ? 0.7 : 1 }}
                 >
                   {loading ? 'Creating…' : 'Create account'}
                 </button>

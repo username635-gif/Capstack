@@ -64,7 +64,7 @@ export default function PartnerHome() {
         <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Portfolio overview</h1>
           <div className="flex items-center gap-3">
-            <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
+            <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}>
               + Originate loan
             </Link>
           </div>

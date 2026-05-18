@@ -582,7 +582,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     onClick={() => act('approve')}
                     disabled={acting !== null}
                     className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                    style={{ background: 'var(--color-primary)', color: '#fff', border: 'none' }}
+                    style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', border: 'none' }}
                   >
                     {acting === 'approve' ? 'Approving…' : 'Approve with audit log'}
                   </button>
@@ -778,7 +778,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       onClick={() => submitEvent('ASSIGNED', { assignee: assignedTo, queue: 'underwriting' }, 'Application owner updated.')}
                       disabled={busy === 'assign'}
                       className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                      style={{ background: 'var(--color-primary)', color: '#fff' }}
+                      style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
                     >
                       {busy === 'assign' ? 'Saving…' : 'Assign'}
                     </button>

@@ -566,7 +566,7 @@ export default function CollectionsPage() {
                       onClick={() => void submitAction(loan)}
                       disabled={submittingLoanId === loan.id}
                       className="px-4 py-3 rounded-lg text-sm font-semibold disabled:opacity-60"
-                      style={{ background: 'var(--color-primary)', color: '#fff' }}
+                      style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
                     >
                       {submittingLoanId === loan.id ? 'Saving…' : 'Save collections action'}
                     </button>

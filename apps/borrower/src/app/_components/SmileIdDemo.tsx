@@ -250,7 +250,7 @@ export function SmileIdDemo({ onComplete, initialResult = null }: Props) {
             onClick={handleAction}
             disabled={running}
             className="px-5 py-2.5 rounded-lg text-sm font-semibold"
-            style={{ background: 'var(--color-secondary)', color: '#fff', opacity: running ? 0.7 : 1 }}
+            style={{ background: 'var(--color-secondary)', color: 'var(--color-secondary-fg)', opacity: running ? 0.7 : 1 }}
           >
             {stage === 'intro'
               ? 'Start demo verification'

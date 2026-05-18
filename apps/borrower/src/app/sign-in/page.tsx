@@ -110,7 +110,7 @@ export default function SignIn() {
             type="submit"
             disabled={loading}
             className="w-full text-sm font-semibold py-2.5 rounded-lg"
-            style={{ background: 'var(--color-primary)', color: '#fff', opacity: loading ? 0.7 : 1 }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>

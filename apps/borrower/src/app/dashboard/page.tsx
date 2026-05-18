@@ -192,7 +192,7 @@ function DashboardContent() {
             <Link
               href="/apply"
               className="text-sm font-semibold px-4 py-2 rounded-lg"
-              style={{ background: 'var(--color-primary)', color: '#fff' }}
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
             >
               + Apply for a loan
             </Link>
@@ -211,7 +211,7 @@ function DashboardContent() {
               <Link
                 href="/apply"
                 className="text-sm font-semibold px-5 py-2.5 rounded-lg"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
               >
                 Apply now
               </Link>
@@ -274,7 +274,7 @@ function DashboardContent() {
                         <button
                           onClick={() => openPay(loan.id, Math.round(loan.outstandingPrincipal / 12))}
                           className="text-xs font-semibold px-3 py-1.5 rounded-md"
-                          style={{ background: 'var(--color-secondary)', color: '#fff' }}
+                          style={{ background: 'var(--color-secondary)', color: 'var(--color-secondary-fg)' }}
                         >
                           Make a payment
                         </button>
@@ -307,7 +307,7 @@ function DashboardContent() {
                               <button
                                 onClick={() => { if (parseFloat(payAmount) > 0) setPayStep(2); }}
                                 className="px-4 py-2 text-xs font-semibold rounded-md"
-                                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
                               >
                                 Next
                               </button>
@@ -370,7 +370,7 @@ function DashboardContent() {
                                 onClick={() => submitPayment(loan)}
                                 disabled={payStatus === 'processing' || !card.name || card.number.replace(/\s/g,'').length < 16 || card.expiry.length < 5 || card.cvv.length < 3}
                                 className="flex-1 py-2 text-xs font-semibold rounded-md disabled:opacity-40"
-                                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
                               >
                                 {payStatus === 'processing' ? 'Processing…' : 'Pay now'}
                               </button>

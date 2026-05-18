@@ -232,7 +232,7 @@ export default function ReportsPage() {
             onClick={() => void loadDashboard()}
             disabled={loading}
             className="px-6 py-3 rounded-lg text-sm font-semibold disabled:opacity-60"
-            style={{ background: 'var(--color-primary)', color: '#fff' }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
           >
             {loading ? 'Refreshing…' : 'Generate report'}
           </button>

@@ -130,7 +130,7 @@ export default function NewApplication() {
                 onClick={lookupBorrower}
                 disabled={looking}
                 className="py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
               >
                 {looking ? 'Looking up…' : 'Find borrower →'}
               </button>
@@ -213,7 +213,7 @@ export default function NewApplication() {
                   onClick={() => setStep(3)}
                   disabled={!productId || !amount || !term}
                   className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-40"
-                  style={{ background: 'var(--color-primary)', color: '#fff' }}
+                  style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
                 >
                   Review →
                 </button>
@@ -254,7 +254,7 @@ export default function NewApplication() {
                   onClick={handleSubmit}
                   disabled={submitting}
                   className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
-                  style={{ background: 'var(--color-secondary)', color: '#fff' }}
+                  style={{ background: 'var(--color-secondary)', color: 'var(--color-secondary-fg)' }}
                 >
                   {submitting ? 'Submitting…' : 'Submit application'}
                 </button>

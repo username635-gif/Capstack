@@ -100,7 +100,7 @@ export default function ApiKeysPage() {
               onClick={createKey}
               disabled={creating}
               className="px-6 py-3 rounded-lg text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
-              style={{ background: 'var(--color-primary)', color: '#fff' }}
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
             >
               {creating ? 'Creating…' : '+ Generate'}
             </button>

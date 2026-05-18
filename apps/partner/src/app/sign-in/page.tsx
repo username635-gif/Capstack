@@ -88,7 +88,7 @@ export default function PartnerSignIn() {
             type="submit"
             disabled={loading}
             className="mt-2 py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
-            style={{ background: 'var(--color-primary)', color: '#fff' }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
           >
             {loading ? 'Authenticating…' : 'Sign in'}
           </button>

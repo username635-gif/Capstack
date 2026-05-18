@@ -189,7 +189,7 @@ export default function Apply() {
               onClick={() => setStep(2)}
               disabled={!selected}
               className="mt-8 px-6 py-3 rounded-lg text-sm font-semibold"
-              style={{ background: 'var(--color-primary)', color: '#fff', opacity: selected ? 1 : 0.4 }}
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', opacity: selected ? 1 : 0.4 }}
             >
               Continue
             </button>
@@ -262,7 +262,7 @@ export default function Apply() {
                 onClick={() => setStep(3)}
                 disabled={!amount || !termDays}
                 className="px-6 py-3 rounded-lg text-sm font-semibold"
-                style={{ background: 'var(--color-primary)', color: '#fff', opacity: amount && termDays ? 1 : 0.4 }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', opacity: amount && termDays ? 1 : 0.4 }}
               >
                 Continue
               </button>
@@ -293,7 +293,7 @@ export default function Apply() {
                 onClick={() => setStep(4)}
                 disabled={!identityResult}
                 className="px-6 py-3 rounded-lg text-sm font-semibold"
-                style={{ background: 'var(--color-primary)', color: '#fff', opacity: identityResult ? 1 : 0.4 }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', opacity: identityResult ? 1 : 0.4 }}
               >
                 Review
               </button>
@@ -354,7 +354,7 @@ export default function Apply() {
                 onClick={handleSubmit}
                 disabled={loading}
                 className="px-6 py-3 rounded-lg text-sm font-semibold"
-                style={{ background: 'var(--color-secondary)', color: '#fff', opacity: loading ? 0.7 : 1 }}
+                style={{ background: 'var(--color-secondary)', color: 'var(--color-secondary-fg)', opacity: loading ? 0.7 : 1 }}
               >
                 {loading ? 'Submitting…' : 'Submit application'}
               </button>

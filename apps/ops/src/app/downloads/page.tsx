@@ -120,7 +120,7 @@ function IdLookupSection({
         <button
           onClick={() => id.trim() && setSubmitted(id.trim())}
           className="px-4 py-2 text-xs font-semibold rounded-lg"
-          style={{ background: 'var(--color-primary)', color: '#fff', cursor: 'pointer' }}
+          style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)', cursor: 'pointer' }}
         >
           Load
         </button>

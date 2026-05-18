@@ -72,7 +72,7 @@ export default function PartnerProducts() {
               <a
                 href="/applications/new"
                 className="mt-auto text-center py-2.5 rounded-lg text-sm font-semibold"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
               >
                 Apply with this product →
               </a>

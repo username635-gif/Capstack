@@ -212,7 +212,7 @@ export default function KycPage() {
           onClick={exportCsv}
           disabled={filteredCases.length === 0}
           className="text-sm px-4 py-2 rounded-lg font-semibold disabled:opacity-50"
-          style={{ background: 'var(--color-primary)', color: '#fff' }}
+          style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
         >
           Export NCR CSV
         </button>

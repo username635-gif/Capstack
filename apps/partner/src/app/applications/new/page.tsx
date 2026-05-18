@@ -151,7 +151,7 @@ export default function NewPartnerApplication() {
                 onClick={() => setStep(2)}
                 disabled={!firstName || !lastName || !email || !income}
                 className="mt-2 py-3 rounded-lg text-sm font-semibold disabled:opacity-40"
-                style={{ background: 'var(--color-primary)', color: '#fff' }}
+                style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
               >
                 Next: Loan details →
               </button>
@@ -207,7 +207,7 @@ export default function NewPartnerApplication() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)' }}>← Back</button>
-                <button onClick={() => setStep(3)} disabled={!productId || !amount || !term} className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-40" style={{ background: 'var(--color-primary)', color: '#fff' }}>Review →</button>
+                <button onClick={() => setStep(3)} disabled={!productId || !amount || !term} className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-40" style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}>Review →</button>
               </div>
             </div>
           )}
@@ -233,7 +233,7 @@ export default function NewPartnerApplication() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-lg text-sm font-semibold" style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)' }}>← Back</button>
-                <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ background: 'var(--color-secondary)', color: '#fff' }}>
+                <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ background: 'var(--color-secondary)', color: 'var(--color-secondary-fg)' }}>
                   {submitting ? 'Submitting…' : 'Submit application'}
                 </button>
               </div>

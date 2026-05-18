@@ -110,7 +110,7 @@ export default function OpsHome() {
           <Link
             href="/applications"
             className="text-sm px-4 py-2 rounded-lg font-semibold"
-            style={{ background: 'var(--color-primary)', color: '#fff' }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
           >
             Review applications
           </Link>
