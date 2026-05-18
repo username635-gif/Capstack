@@ -330,7 +330,7 @@ export default function StaffSignIn() {
             </span>
           </div>
 
-          <div className="font-extrabold text-3xl tracking-tight mb-2">Capstack Ops Console</div>
+          <div className="font-extrabold text-[1.85rem] tracking-tight mb-2">Capstack Ops Console</div>
           <div className="text-sm" style={{ color: 'var(--color-muted)' }}>
             Internal underwriting, servicing, collections, and portfolio operations.
           </div>

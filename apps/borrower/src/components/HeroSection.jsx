@@ -440,7 +440,7 @@ export default function HeroSection() {
           max-width: 13ch;
           margin: 0;
           font-family: "Dentonvariabletest Vf", "Times New Roman", sans-serif;
-          font-size: clamp(3.2rem, 7vw, 6.25rem);
+          font-size: clamp(2.75rem, 6vw, 5.35rem);
           font-weight: 700;
           line-height: 0.95;
           letter-spacing: -0.05em;

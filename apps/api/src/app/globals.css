@@ -8,6 +8,7 @@
   --color-primary: rgb(14, 13, 12);
   --color-primary-fg: rgb(249, 248, 246);
   --color-secondary: rgb(32, 32, 31);
+  --color-secondary-fg: rgb(249, 248, 246);
   --color-muted: rgb(32, 32, 31);
   --color-border: rgba(217, 217, 217, 0.2);
   --color-glow: rgba(249, 248, 246, 0.65);
@@ -22,6 +23,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+html {
+  background-color: var(--background);
+  font-size: 15px;
+  color-scheme: light;
 }
 
 body {
@@ -52,4 +59,12 @@ textarea {
 ::selection {
   background: var(--color-primary);
   color: var(--color-primary-fg);
+}
+
+:where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-primary)"] {
+  color: var(--color-primary-fg) !important;
+}
+
+:where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-secondary)"] {
+  color: var(--color-secondary-fg) !important;
 }

@@ -14,7 +14,7 @@ export default function ApiHome() {
       style={{ background: 'var(--background)', color: 'var(--foreground)' }}
     >
       <div className="text-center space-y-4 rounded-3xl px-10 py-12" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-        <h1 className="text-4xl font-bold tracking-tight">Capstack API</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Capstack API</h1>
         <p className="text-lg" style={{ color: 'var(--color-muted)' }}>REST API service — v1</p>
         <div className="mt-8 inline-block rounded-md px-6 py-3 text-sm" style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}>
           <code>POST /api/v1/applications</code>

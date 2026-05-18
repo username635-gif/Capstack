@@ -336,7 +336,7 @@ export default function ApplicationsPage() {
           <Link
             href="/applications/new"
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: 'var(--color-primary)', color: '#fff' }}
+            style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
           >
             + Manual application
           </Link>
@@ -380,15 +380,23 @@ export default function ApplicationsPage() {
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors inline-flex items-center gap-2"
               style={{
                 background: filter === status ? 'var(--color-primary)' : 'var(--color-surface-2)',
-                color: filter === status ? '#fff' : 'var(--color-muted)',
+                color: filter === status ? 'var(--color-primary-fg)' : 'var(--color-muted)',
               }}
             >
               <span>{formatStatus(status)}</span>
               <span
                 className="min-w-5 px-1.5 py-0.5 rounded-full"
                 style={{
-                  background: status === 'SUBMITTED' && counts[status] > 0 && filter !== status ? 'var(--badge-pending-bg)' : 'rgba(255,255,255,0.12)',
-                  color: status === 'SUBMITTED' && counts[status] > 0 && filter !== status ? 'var(--badge-pending-fg)' : filter === status ? '#fff' : 'var(--color-muted)',
+                  background: filter === status
+                    ? 'var(--color-surface-2)'
+                    : status === 'SUBMITTED' && counts[status] > 0
+                      ? 'var(--badge-pending-bg)'
+                      : 'rgba(255,255,255,0.12)',
+                  color: status === 'SUBMITTED' && counts[status] > 0 && filter !== status
+                    ? 'var(--badge-pending-fg)'
+                    : filter === status
+                      ? 'var(--color-primary-fg)'
+                      : 'var(--color-muted)',
                 }}
               >
                 {counts[status]}

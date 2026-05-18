@@ -87,6 +87,7 @@
 
 html {
   background-color: var(--background);
+  font-size: 15px;
   color-scheme: light;
 }
 
@@ -153,4 +154,12 @@ button {
 button:focus-visible {
   outline: 2px solid var(--color-border) !important;
   outline-offset: 2px;
+}
+
+:where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-primary)"] {
+  color: var(--color-primary-fg) !important;
+}
+
+:where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-secondary)"] {
+  color: var(--color-secondary-fg) !important;
 }

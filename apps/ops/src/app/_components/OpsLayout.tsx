@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getSession, clearSession, loadServerSession, OpsSession } from '@/lib/session';
 import { ThemeToggle } from './ThemeProvider';
+import { InteractiveMeshSurface } from './InteractiveMeshSurface';
 
 const NAV = [
   { label: 'Dashboard',    href: '/' },
@@ -72,7 +73,7 @@ function SimpleCalculator({ onClose }: { onClose: () => void }) {
         padding: '10px 0', borderRadius: 8, fontSize: 15, fontWeight: 600,
         cursor: 'pointer', border: '1px solid var(--color-border)',
         background: accent ? 'var(--color-secondary)' : 'var(--color-surface-2)',
-        color: accent ? '#fff' : 'var(--foreground)',
+        color: accent ? 'var(--color-secondary-fg)' : 'var(--foreground)',
       }}
     >
       {label}
@@ -193,7 +194,13 @@ export default function OpsLayout({
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+    <InteractiveMeshSurface
+      className="min-h-screen"
+      contentClassName="relative z-10 flex min-h-screen"
+      lightBackground="linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)"
+      darkBackground="linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%), rgb(0, 0, 0)"
+      style={{ color: 'var(--foreground)' }}
+    >
       {calcOpen && <SimpleCalculator onClose={() => setCalcOpen(false)} />}
 
       {/* Sidebar */}
@@ -296,6 +303,6 @@ export default function OpsLayout({
 
         <main className="flex-1 overflow-auto p-8">{children}</main>
       </div>
-    </div>
+    </InteractiveMeshSurface>
   );
 }
