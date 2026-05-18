@@ -5,14 +5,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith('/sign-in') || pathname.startsWith('/_next')) {
     return NextResponse.next();
   }
 
-  if (req.cookies.has('capstack_auth')) return NextResponse.next();
+  if (req.cookies.has('capstack_auth')) {
+    return NextResponse.next();
+  }
 
   const url = req.nextUrl.clone();
   url.pathname = '/sign-in';

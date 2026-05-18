@@ -1,5 +1,5 @@
 /**
- * Borrower app route protection middleware.
+ * Borrower app route protection proxy.
  *
  * Checks for the `capstack_auth` cookie (set by setSession() on sign-in).
  * Redirects unauthenticated requests to /sign-in.
@@ -24,29 +24,24 @@ const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
 const SESSION_TIMEOUT_MS =
   Number(process.env.SESSION_TIMEOUT_HOURS ?? 8) * 60 * 60 * 1000;
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Pattern 1 — early return: allow public paths and Next.js internals first
-  if (PUBLIC_PATHS.some(p => pathname === p) || pathname.startsWith('/_next')) {
+  if (PUBLIC_PATHS.some((path) => pathname === path) || pathname.startsWith('/_next')) {
     return NextResponse.next();
   }
 
   const authCookie = req.cookies.get('capstack_auth')?.value;
 
-  // Pattern 1 — early return: no cookie → redirect to sign-in
   if (!authCookie) {
     const url = req.nextUrl.clone();
     url.pathname = '/sign-in';
     return NextResponse.redirect(url);
   }
 
-  // Pattern 3 — optional chaining / nullish coalescing on parsed timestamp
-  // Legacy value "1" has no timestamp — treat as valid (issuedAt = 0 means infinite age).
-  const issuedAt   = authCookie === '1' ? 0 : Number(authCookie);
+  const issuedAt = authCookie === '1' ? 0 : Number(authCookie);
   const sessionAge = issuedAt > 0 ? Date.now() - issuedAt : 0;
 
-  // Pattern 2 — ternary: timed-out → redirect; still valid → continue
   if (sessionAge > SESSION_TIMEOUT_MS) {
     const url = req.nextUrl.clone();
     url.pathname = '/sign-in';
