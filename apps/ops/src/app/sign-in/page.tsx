@@ -59,7 +59,7 @@ export default function StaffSignIn() {
     <div
       className="min-h-screen flex items-center justify-center px-4"
       style={{
-        background: 'radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 28%), radial-gradient(circle at top left, rgba(20, 184, 166, 0.10), transparent 24%), var(--background)',
+        background: 'radial-gradient(circle at top right, rgba(217, 217, 217, 0.2), rgba(255, 255, 255, 0) 28%), radial-gradient(circle at top left, rgba(249, 248, 246, 0.65), rgba(255, 255, 255, 0) 24%), var(--background)',
       }}
     >
       <div
@@ -70,13 +70,13 @@ export default function StaffSignIn() {
           <div className="flex items-center justify-between gap-3 mb-4">
             <span
               className="text-[11px] font-semibold uppercase tracking-[0.24em] px-3 py-1 rounded-full"
-              style={{ background: 'rgba(15, 43, 61, 0.08)', color: 'var(--color-primary)', border: '1px solid var(--color-border)' }}
+              style={{ background: 'var(--color-surface-2)', color: 'var(--color-secondary)', border: '1px solid var(--color-border)' }}
             >
               Internal Workspace
             </span>
             <span
               className="text-[11px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full"
-              style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--color-accent)', border: '1px solid rgba(245, 158, 11, 0.25)' }}
+              style={{ background: 'var(--color-surface-2)', color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}
             >
               {AUTH_MODE_LABEL}
             </span>
@@ -90,7 +90,7 @@ export default function StaffSignIn() {
 
         <div
           className="rounded-xl px-4 py-4 mb-5"
-          style={{ background: 'rgba(15, 43, 61, 0.04)', border: '1px solid var(--color-border)' }}
+          style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
         >
           <div className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: 'var(--color-primary)' }}>
             Authentication
@@ -186,7 +186,7 @@ export default function StaffSignIn() {
               type="submit"
               disabled={loading}
               className="mt-2 py-3 rounded-lg text-sm font-semibold disabled:opacity-50"
-              style={{ background: 'var(--color-primary)', color: '#fff' }}
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>

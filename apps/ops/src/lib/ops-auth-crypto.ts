@@ -40,6 +40,8 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 export const OPS_API_TOKEN_TTL_SECONDS = 60 * 5;
+export const OPS_AUTH_CONFIG_HINT =
+  'Set OPS_INTERNAL_AUTH_SECRET to the same strong value in both the ops and api environments.';
 
 export function getOpsAuthSharedSecret(): string | null {
   const configured = process.env.OPS_INTERNAL_AUTH_SECRET?.trim();
@@ -135,7 +137,7 @@ function fromBase64Url(value: string): string {
 async function signPayload(payload: SignedSessionPayload | SignedApiPayload): Promise<string> {
   const secret = getOpsAuthSharedSecret();
   if (!secret) {
-    throw new Error('OPS_INTERNAL_AUTH_SECRET must be set in production.');
+    throw new Error(`OPS internal auth is not configured. ${OPS_AUTH_CONFIG_HINT}`);
   }
 
   const encodedPayload = toBase64Url(JSON.stringify(payload));

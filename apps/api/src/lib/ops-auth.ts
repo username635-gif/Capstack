@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOpsAuthSharedSecret, verifyOpsAccessToken } from '@/lib/ops-access-token';
 
+const OPS_AUTH_CONFIG_HINT =
+  'Set OPS_INTERNAL_AUTH_SECRET to the same strong value in both the ops and api environments.';
+
 export type OpsIdentity = {
   actor: string;
   role: string;
@@ -36,7 +39,10 @@ async function authorize(
   if (!getOpsAuthSharedSecret()) {
     return {
       ok: false,
-      response: NextResponse.json({ error: 'Ops API auth is not configured.' }, { status: 503 }),
+      response: NextResponse.json(
+        { error: `Ops API auth is not configured. ${OPS_AUTH_CONFIG_HINT}` },
+        { status: 503 },
+      ),
     };
   }
 

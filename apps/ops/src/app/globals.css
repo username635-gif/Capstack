@@ -1,77 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  /* Core */
-  --background: #F8FAFC;
-  --foreground: #1E293B;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #F1F5F9;
+  --background: rgb(249, 248, 246);
+  --foreground: rgb(14, 13, 12);
+  --color-surface: rgb(249, 248, 246);
+  --color-surface-2: rgba(217, 217, 217, 0.2);
 
-  /* Brand */
-  --color-primary: #0F2B3D;
-  --color-primary-fg: #FFFFFF;
-  --color-secondary: #14B8A6;
-  --color-accent: #F59E0B;
-  --color-danger: #DC2626;
+  --color-primary: rgb(14, 13, 12);
+  --color-primary-fg: rgb(249, 248, 246);
+  --color-secondary: rgb(32, 32, 31);
+  --color-secondary-fg: rgb(249, 248, 246);
+  --color-accent: rgb(0, 0, 0);
+  --color-danger: rgb(0, 0, 0);
 
-  /* Text & borders */
-  --color-muted: #64748B;
-  --color-border: #E2E8F0;
+  --color-muted: rgb(32, 32, 31);
+  --color-border: rgba(217, 217, 217, 0.2);
+  --color-glow: rgba(249, 248, 246, 0.65);
+  --color-clear: rgba(255, 255, 255, 0);
 
-  /* Progress */
-  --color-progress-track: #E2E8F0;
-  --color-progress-fill: #14B8A6;
+  --color-progress-track: rgba(217, 217, 217, 0.2);
+  --color-progress-fill: rgb(14, 13, 12);
 
-  /* Badges */
-  --badge-approved-bg: #ECFDF5;
-  --badge-approved-fg: #059669;
-  --badge-pending-bg: #FEFCE8;
-  --badge-pending-fg: #B45309;
-  --badge-overdue-bg: #FFF7ED;
-  --badge-overdue-fg: #C2410C;
-  --badge-declined-bg: #FEF2F2;
-  --badge-declined-fg: #DC2626;
-  --badge-active-bg: #ECFDF5;
-  --badge-active-fg: #059669;
-  --badge-awaiting-bg: #EFF6FF;
-  --badge-awaiting-fg: #1D4ED8;
+  --badge-approved-bg: rgba(217, 217, 217, 0.2);
+  --badge-approved-fg: rgb(14, 13, 12);
+  --badge-pending-bg: rgba(217, 217, 217, 0.2);
+  --badge-pending-fg: rgb(32, 32, 31);
+  --badge-overdue-bg: rgba(217, 217, 217, 0.2);
+  --badge-overdue-fg: rgb(0, 0, 0);
+  --badge-declined-bg: rgba(217, 217, 217, 0.2);
+  --badge-declined-fg: rgb(0, 0, 0);
+  --badge-active-bg: rgba(217, 217, 217, 0.2);
+  --badge-active-fg: rgb(14, 13, 12);
+  --badge-awaiting-bg: rgba(217, 217, 217, 0.2);
+  --badge-awaiting-fg: rgb(32, 32, 31);
 
-  /* Shape */
   --radius-card: 12px;
   --radius-pill: 9999px;
+  --font-ui: Neuemontreal, Arial, sans-serif;
+  --font-display: "Dentonvariabletest Vf", "Times New Roman", sans-serif;
+  --font-editorial: "Times New Roman";
 }
 
-/* ── Dark mode ───────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --background: #0D1117;
-  --foreground: #E6EDF3;
-  --color-surface: #161B22;
-  --color-surface-2: #21262D;
-  --color-primary: #14B8A6;
-  --color-primary-fg: #0D1117;
-  --color-secondary: #2DD4BF;
-  --color-muted: #8B949E;
-  --color-border: #30363D;
-  --color-progress-track: #30363D;
-  --color-progress-fill: #2DD4BF;
-  --badge-approved-bg: #182F22;
-  --badge-approved-fg: #86EFAC;
-  --badge-pending-bg: #252009;
-  --badge-pending-fg: #D4A838;
-  --badge-overdue-bg: #251A07;
-  --badge-overdue-fg: #FDBA74;
-  --badge-declined-bg: #271414;
-  --badge-declined-fg: #FCA5A5;
-  --badge-active-bg: #182F22;
-  --badge-active-fg: #86EFAC;
-  --badge-awaiting-bg: #101D2E;
-  --badge-awaiting-fg: #93C5FD;
+  --background: rgb(249, 248, 246);
+  --foreground: rgb(14, 13, 12);
+  --color-surface: rgb(249, 248, 246);
+  --color-surface-2: rgba(217, 217, 217, 0.2);
+  --color-primary: rgb(14, 13, 12);
+  --color-primary-fg: rgb(249, 248, 246);
+  --color-secondary: rgb(32, 32, 31);
+  --color-secondary-fg: rgb(249, 248, 246);
+  --color-accent: rgb(0, 0, 0);
+  --color-danger: rgb(0, 0, 0);
+  --color-muted: rgb(32, 32, 31);
+  --color-border: rgba(217, 217, 217, 0.2);
+  --color-glow: rgba(249, 248, 246, 0.65);
+  --color-clear: rgba(255, 255, 255, 0);
+  --color-progress-track: rgba(217, 217, 217, 0.2);
+  --color-progress-fill: rgb(14, 13, 12);
+  --badge-approved-bg: rgba(217, 217, 217, 0.2);
+  --badge-approved-fg: rgb(14, 13, 12);
+  --badge-pending-bg: rgba(217, 217, 217, 0.2);
+  --badge-pending-fg: rgb(32, 32, 31);
+  --badge-overdue-bg: rgba(217, 217, 217, 0.2);
+  --badge-overdue-fg: rgb(0, 0, 0);
+  --badge-declined-bg: rgba(217, 217, 217, 0.2);
+  --badge-declined-fg: rgb(0, 0, 0);
+  --badge-active-bg: rgba(217, 217, 217, 0.2);
+  --badge-active-fg: rgb(14, 13, 12);
+  --badge-awaiting-bg: rgba(217, 217, 217, 0.2);
+  --badge-awaiting-fg: rgb(32, 32, 31);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-ui);
   --radius-sm:  2px;
   --radius:     4px;
   --radius-md:  5px;
@@ -81,11 +85,39 @@
   --radius-3xl: 12px;
 }
 
+html {
+  background-color: var(--background);
+}
+
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at top left, var(--color-glow) 0%, var(--color-clear) 34%),
+    linear-gradient(180deg, var(--background) 0%, rgba(249, 248, 246, 0.65) 100%);
   color: var(--foreground);
-  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
 }
 
 /* Progress bar */

@@ -85,6 +85,7 @@ Notes:
 - Root `.env` / shell vars: useful for shared packages, Prisma, and local scripts.
 - App-local `.env.local` files: still valid if you want per-app Next.js env management.
 - Vercel: set the same variables per deployed project (`api`, `borrower`, `ops`, `partner`) when you wire up real providers.
+- Ops auth: set `OPS_INTERNAL_AUTH_SECRET` to the same strong random value in both the `ops` and `api` projects, or ops sign-in and internal API calls will fail with a 503.
 - When the client gives you live API credentials, copy `.env.example` values into your actual env files and fill only the providers you are enabling.
 - Smile ID is currently stubbed in `packages/kyc`; without provider credentials it stays in demo/mock mode and does not activate a live biometric auth flow.
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OPS_AUTH_COOKIE, parseOpsAuthCookie } from '@/lib/auth-cookie';
+import { OPS_AUTH_CONFIG_HINT } from '@/lib/ops-auth-crypto';
 import { attachStaffSessionCookie, fetchStaffSessionByEmail, sessionCookieOptions } from '@/lib/staff-session';
 
 export async function POST(req: NextRequest) {
@@ -18,7 +19,10 @@ export async function POST(req: NextRequest) {
   try {
     return await attachStaffSessionCookie(NextResponse.json(staffSession.session), staffSession.session);
   } catch {
-    return NextResponse.json({ error: 'Ops session signing is not configured.' }, { status: 503 });
+    return NextResponse.json(
+      { error: `Ops session signing is not configured. ${OPS_AUTH_CONFIG_HINT}` },
+      { status: 503 },
+    );
   }
 }
 
