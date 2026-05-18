@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import MeshPatternOverlay from './MeshPatternOverlay';
+
 const APPLY_START_HREF = '/sign-up?next=/apply';
 const VIEW_APPLICATION_HREF = '/sign-in?next=/dashboard';
 const PARTICLE_COUNT = 70;
@@ -36,22 +38,22 @@ function getInitialMode() {
 function getCanvasPalette(mode) {
   if (mode === 'dark') {
     return {
-      nodeColor: 'rgba(255, 255, 255, 0.30)',
+      nodeColor: 'rgba(255, 255, 255, 0.36)',
       lineRgb: '255, 255, 255',
-      lineMaxAlpha: 0.12,
+      lineMaxAlpha: 0.16,
       mouseRgb: '92, 219, 122',
-      mouseLineMaxAlpha: 0.18,
-      glowInner: 'rgba(92, 219, 122, 0.07)',
+      mouseLineMaxAlpha: 0.24,
+      glowInner: 'rgba(92, 219, 122, 0.10)',
     };
   }
 
   return {
-    nodeColor: 'rgba(0, 0, 0, 0.22)',
+    nodeColor: 'rgba(0, 0, 0, 0.28)',
     lineRgb: '0, 0, 0',
-    lineMaxAlpha: 0.10,
+    lineMaxAlpha: 0.12,
     mouseRgb: '0, 0, 0',
-    mouseLineMaxAlpha: 0.22,
-    glowInner: 'rgba(0, 0, 0, 0.05)',
+    mouseLineMaxAlpha: 0.26,
+    glowInner: 'rgba(0, 0, 0, 0.07)',
   };
 }
 
@@ -247,6 +249,7 @@ export default function HeroSection() {
 
   return (
     <section ref={wrapperRef} className={`capstackHero ${mode}`}>
+      <MeshPatternOverlay mode={mode} />
       <canvas ref={canvasRef} className="capstackHero__canvas" aria-hidden="true" />
 
       <div className="capstackHero__content">
@@ -349,7 +352,7 @@ export default function HeroSection() {
           left: 0;
           width: 100%;
           height: 100%;
-          z-index: 0;
+          z-index: 1;
           pointer-events: none;
         }
 
