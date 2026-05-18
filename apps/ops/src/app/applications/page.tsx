@@ -164,12 +164,15 @@ export default function ApplicationsPage() {
       setError(null);
 
       const params = new URLSearchParams({
-        status: filter,
         limit: String(PAGE_SIZE),
         offset: String((page - 1) * PAGE_SIZE),
         sortBy: sortKey,
         sortDirection,
       });
+
+      if (filter !== 'ALL') {
+        params.set('status', filter);
+      }
 
       if (deferredSearch) {
         params.set('q', deferredSearch);

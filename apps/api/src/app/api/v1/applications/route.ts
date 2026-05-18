@@ -49,6 +49,8 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
 
 function buildWorkflowWhere(workflowStatus: WorkflowStatus, baseWhere: Record<string, unknown>) {
   switch (workflowStatus) {
+    case 'ALL':
+      return baseWhere;
     case 'SUBMITTED':
       return { ...baseWhere, status: { in: REVIEW_QUEUE_STATUSES } };
     case 'APPROVED':
