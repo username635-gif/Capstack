@@ -1,50 +1,10 @@
-import Link from 'next/link';
-import { ThemeToggle } from './_components/ThemeProvider';
-
-const APPLY_START_HREF = '/sign-up?next=/apply';
+import HeroSection from '@/components/HeroSection';
 
 export default function BorrowerHome() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--foreground)" }}>
 
-      {/* Nav */}
-      <nav style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-lg font-bold tracking-tight">Capstack</span>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</Link>
-            <Link
-              href={APPLY_START_HREF}
-              className="text-sm font-semibold px-4 py-2 rounded-lg"
-              style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}
-            >
-              Apply now
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24 gap-6">
-        <div className="text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full" style={{ background: "var(--color-surface-2)", color: "var(--color-secondary)", border: "1px solid var(--color-border)" }}>
-          Fast · Transparent · Fair
-        </div>
-        <h1 className="text-5xl font-black tracking-tight max-w-2xl leading-tight">
-          Get funded <span style={{ color: "var(--color-secondary)" }}>in 24 hours</span>
-        </h1>
-        <p className="text-lg max-w-lg" style={{ color: "var(--color-muted)" }}>
-          Apply for a personal or business loan in minutes. No hidden fees, no surprises — just clear terms and fast decisions.
-        </p>
-        <div className="flex gap-3 mt-2">
-          <Link href={APPLY_START_HREF} className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-primary)", color: "#fff" }}>
-            Apply for a loan
-          </Link>
-          <Link href="/sign-in?next=/dashboard" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--foreground)" }}>
-            Check my application
-          </Link>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* Stats bar */}
       <section style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
