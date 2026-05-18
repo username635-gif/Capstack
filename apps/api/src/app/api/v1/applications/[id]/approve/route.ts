@@ -13,6 +13,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
+import { authorizeOpsRequest } from '@/lib/ops-auth';
+
+const APPLICATION_WRITE_ROLES = ['ADMIN', 'UNDERWRITER', 'CREDIT_OFFICER'];
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
@@ -22,18 +25,49 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   }
 }
 
+type ApprovalBody = {
+  actor?: string;
+  rationale?: string;
+  overrideReason?: string;
+};
+
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await authorizeOpsRequest(req, APPLICATION_WRITE_ROLES);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
   // Pattern 4 — destructure
   const { id } = await params;
+  const [parseErr, body] = await to<ApprovalBody>(req.json());
+  const approvalBody = parseErr ? {} : (body ?? {});
+  const actor = auth.identity.actor;
+  const rationale = approvalBody.rationale?.trim() || 'Approved from ops workspace.';
+  const overrideReason = approvalBody.overrideReason?.trim() || null;
 
   // Load application with product (need lenderId)
   const [loadErr, application] = await to(
-    prisma.application.findUnique({
-      where:   { id },
-      include: { product: true },
+    prisma.application.findFirst({
+      where: {
+        id,
+        product: { is: { lenderId: auth.identity.lenderId } },
+      },
+      include: {
+        product: true,
+        decisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            recommendation: true,
+            modelVersion: true,
+            pdScore: true,
+            riskBand: true,
+          },
+        },
+      },
     }),
   );
 
@@ -49,6 +83,9 @@ export async function POST(
   const termDays   = application.termDaysRequested;
   const maturity   = new Date(now.getTime() + termDays * 86_400_000);
   const loanNumber = `LN-${Date.now()}`;
+  const latestDecision = application.decisions[0] ?? null;
+  const modelRecommendation = latestDecision?.recommendation ?? null;
+  const isOverride = modelRecommendation !== null && modelRecommendation !== 'APPROVE';
 
   // Update application + create loan atomically
   const [txErr, result] = await to(
@@ -73,6 +110,42 @@ export async function POST(
           maturityDate:          maturity,
           outstandingPrincipal:  application.amountRequested,
           status:                'PENDING_DISBURSEMENT',
+        },
+      });
+
+      await tx.applicationEvent.create({
+        data: {
+          applicationId: id,
+          type:          'APPROVED',
+          actor,
+          payload: {
+            rationale,
+            modelRecommendation,
+            overrideReason,
+            overridden: isOverride,
+            modelVersion: latestDecision?.modelVersion ?? null,
+            pdScore: latestDecision?.pdScore ?? null,
+            riskBand: latestDecision?.riskBand ?? null,
+            loanNumber,
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actor,
+          actorType: 'USER',
+          action: isOverride ? 'APPLICATION_APPROVED_WITH_OVERRIDE' : 'APPLICATION_APPROVED',
+          resource: 'APPLICATION',
+          resourceId: id,
+          after: {
+            status: 'APPROVED',
+            rationale,
+            modelRecommendation,
+            overrideReason,
+            overridden: isOverride,
+            loanNumber,
+          },
         },
       });
 

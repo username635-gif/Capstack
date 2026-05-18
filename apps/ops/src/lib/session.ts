@@ -28,10 +28,29 @@ export function getSession(): OpsSession | null {
 
 export function setSession(s: OpsSession): void {
   localStorage.setItem(KEY, JSON.stringify(s));
-  document.cookie = `capstack_auth=1; path=/; max-age=86400; SameSite=Lax`;
+  document.cookie = 'capstack_auth=; path=/; max-age=0; SameSite=Lax';
 }
 
-export function clearSession(): void {
+export async function loadServerSession(): Promise<OpsSession | null> {
+  try {
+    const res = await fetch('/api/session', { cache: 'no-store' });
+    if (!res.ok) return null;
+
+    const session = await res.json() as OpsSession;
+    setSession(session);
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearSession(): Promise<void> {
   localStorage.removeItem(KEY);
   document.cookie = 'capstack_auth=; path=/; max-age=0; SameSite=Lax';
+
+  try {
+    await fetch('/api/session', { method: 'DELETE' });
+  } catch {
+    // Best-effort cleanup; route middleware still blocks invalid sessions.
+  }
 }

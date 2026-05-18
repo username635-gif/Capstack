@@ -1,8 +1,11 @@
 'use client';
 
 import OpsLayout from '@/app/_components/OpsLayout';
+import { getOpsAuthModeLabel, getPublicOpsAuthConfig, OPS_SSO_PROVIDER_LABELS } from '@/lib/auth-config';
 import { getSession } from '@/lib/session';
 import { useEffect, useState } from 'react';
+
+const AUTH_CONFIG = getPublicOpsAuthConfig();
 
 export default function SettingsPage() {
   const [session, setSession] = useState<ReturnType<typeof getSession>>(null);
@@ -31,12 +34,23 @@ export default function SettingsPage() {
         )}
 
         {/* Auth note */}
+        <Section title="Authentication mode">
+          <Row label="Mode" value={getOpsAuthModeLabel(AUTH_CONFIG.mode)} />
+          <Row label="Work email sign-in" value={AUTH_CONFIG.emailSignInEnabled ? 'Enabled' : 'Disabled'} />
+          <Row
+            label="SSO providers"
+            value={AUTH_CONFIG.enabledProviders.length > 0
+              ? AUTH_CONFIG.enabledProviders.map((provider) => OPS_SSO_PROVIDER_LABELS[provider]).join(', ')
+              : 'Not configured'}
+          />
+        </Section>
+
         <div
           className="rounded-xl px-5 py-4 text-xs"
           style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}
         >
-          <strong>Authentication:</strong> Currently running in demo mode (no password required).<br />
-          To enable production auth, integrate Clerk in <code>apps/ops/src/app/sign-in/page.tsx</code> and replace the <code>/api/v1/auth/staff</code> call with <code>useSignIn()</code> from <code>@clerk/nextjs</code>.
+          <strong>Authentication:</strong> This preview uses provisioned passwordless demo access for internal staff only.<br />
+          Production auth can now be staged by setting <code>NEXT_PUBLIC_OPS_AUTH_MODE</code>, enabling <code>NEXT_PUBLIC_OPS_SSO_PROVIDERS</code>, and wiring provider start URLs before replacing demo auth entirely.
         </div>
       </div>
     </OpsLayout>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { setSession } from '@/lib/session';
@@ -12,6 +12,12 @@ export default function SignIn() {
   const [email, setEmail]   = useState('');
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [returnPath, setReturnPath] = useState('/dashboard');
+
+  useEffect(() => {
+    const nextPath = new URLSearchParams(window.location.search).get('next');
+    setReturnPath(nextPath?.startsWith('/') ? nextPath : '/dashboard');
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,7 +38,7 @@ export default function SignIn() {
       }
 
       setSession(data);
-      router.push('/dashboard');
+      router.push(returnPath);
     } catch {
       setError('Unable to reach the server. Please try again.');
     } finally {
@@ -56,6 +62,9 @@ export default function SignIn() {
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
             Sign in to view your loans and applications.
           </p>
+          <p className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+            Use the email linked to your account. For this demo, sign-in is email-only; live launch will use a secure link or OTP.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -68,6 +77,7 @@ export default function SignIn() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
+              disabled={loading}
               className="w-full text-sm px-3 py-2 rounded-lg outline-none"
               style={{
                 background: 'var(--color-surface-2)',
@@ -87,6 +97,15 @@ export default function SignIn() {
             </div>
           )}
 
+          {loading && (
+            <div
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{ background: 'var(--color-surface-2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
+            >
+              Checking your account and opening your secure borrower workspace…
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -99,7 +118,7 @@ export default function SignIn() {
 
         <p className="text-xs mt-6 text-center" style={{ color: 'var(--color-muted)' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/sign-up" style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
+          <Link href={returnPath === '/dashboard' ? '/sign-up' : `/sign-up?next=${encodeURIComponent(returnPath)}`} style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>
             Create one
           </Link>
         </p>

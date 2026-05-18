@@ -1,194 +1,944 @@
 'use client';
 
-import { useState, use } from 'react';
-import { useRouter }     from 'next/navigation';
-import OpsLayout         from '@/app/_components/OpsLayout';
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import OpsLayout from '@/app/_components/OpsLayout';
+import { buildOpsApiHeaders } from '@/lib/api-client';
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
+
+type WorkflowStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
+type SlaStatus = 'WITHIN_SLA' | 'BREACH_SOON' | 'BREACHED';
 
 type ApplicationDetail = {
-  id: string; status: string; amountRequested: number; termMonths: number;
-  submittedAt: string; purpose?: string;
-  borrower?: { id: string; firstName: string; lastName: string; email: string; phone?: string; idNumber?: string; employmentStatus?: string; monthlyIncome?: number; creditScore?: number };
-  product?:  { name: string; minAmount: number; maxAmount: number; aprBps: number };
-  decision?: { id: string; decision: string; pdScore: number; affordabilityRatio: number; decidedAt: string; rejectionReasons?: string[] };
+  id: string;
+  referenceNumber: string;
+  status: string;
+  workflowStatus: WorkflowStatus;
+  amountRequested: number;
+  termDaysRequested: number;
+  submittedAt: string;
+  decidedAt?: string | null;
+  purpose?: string | null;
+  channel: string;
+  canApprove: boolean;
+  canReject: boolean;
+  borrower: {
+    id: string;
+    type: 'INDIVIDUAL' | 'BUSINESS';
+    displayName: string;
+    email: string;
+    phone: string;
+    riskRating?: string | null;
+    blacklistFlag: boolean;
+    individual?: {
+      fullName: string;
+      idNumber: string;
+      dateOfBirth: string;
+      monthlyIncome?: number | null;
+      employmentStatus?: string | null;
+      employer?: string | null;
+      occupation?: string | null;
+      nationality?: string | null;
+    } | null;
+    business?: {
+      legalName: string;
+      tradingName?: string | null;
+      registrationNumber: string;
+      industry?: string | null;
+      founded?: string | null;
+      monthlyTurnover?: number | null;
+      numberOfEmployees?: number | null;
+    } | null;
+  };
+  product: {
+    id: string;
+    name: string;
+    minAmount: number;
+    maxAmount: number;
+    minTermDays: number;
+    maxTermDays: number;
+    defaultAprBps?: number | null;
+    amortizationMethod?: string | null;
+  };
+  loan?: {
+    id: string;
+    status: string;
+    loanNumber: string;
+    principal: number;
+    aprBps: number;
+    termDays: number;
+    startDate: string;
+    maturityDate: string;
+    disbursedAt?: string | null;
+    outstandingPrincipal: number;
+    outstandingInterest: number;
+    outstandingFees: number;
+  } | null;
+  latestDecision?: {
+    id: string;
+    modelVersion?: string | null;
+    pdScore: number;
+    lgdScore: number;
+    expectedLoss: number;
+    riskBand: string;
+    recommendation: string;
+    approvedAmount?: number | null;
+    approvedTermDays?: number | null;
+    approvedAprBps?: number | null;
+    reasonCodes: string[];
+    policyExceptions: string[];
+    createdAt: string;
+    decisionMaker?: { fullName: string; role: string } | null;
+  } | null;
+  underwriting: {
+    recommendation?: string | null;
+    modelVersion?: string | null;
+    riskBand?: string | null;
+    riskScore?: number | null;
+    confidencePct?: number | null;
+    pdScore?: number | null;
+    lgdScore?: number | null;
+    expectedLoss?: number | null;
+    reasonCodes: string[];
+    topFactors: string[];
+    policyExceptions: string[];
+    recommendedOffer: {
+      amountCents: number;
+      termDays: number;
+      aprBps: number;
+      estimatedInstallmentCents: number;
+    };
+  };
+  affordability: {
+    source: 'BANK_TRANSACTIONS' | 'DECLARED_INCOME' | 'TURNOVER_FALLBACK' | 'UNAVAILABLE';
+    monthlyIncomeCents?: number | null;
+    monthlyExpensesCents?: number | null;
+    monthlyObligationsCents?: number | null;
+    requestedInstallmentCents?: number | null;
+    disposableIncomeCents?: number | null;
+    headroomCents?: number | null;
+    dtiPct?: number | null;
+    canAfford: boolean | null;
+    ncaStatus: 'PASS' | 'FAIL' | 'REVIEW';
+    avgMonthlyCreditsCents?: number | null;
+    avgMonthlyDebitsCents?: number | null;
+    bankStatementsTotal: number;
+    bankStatementsVerified: number;
+    parsedDocumentCount: number;
+    lastStatementAt?: string | null;
+  };
+  compliance: {
+    kycStatus: string;
+    kycChecks: Array<{
+      id: string;
+      type: string;
+      provider: string;
+      status: string;
+      outcome?: string | null;
+      failureReason?: string | null;
+      createdAt: string;
+      completedAt?: string | null;
+    }>;
+    amlRisk: 'LOW' | 'MEDIUM' | 'HIGH';
+    amlAlerts: Array<{
+      id: string;
+      type: string;
+      severity: string;
+      status: string;
+      details: unknown;
+      filedSar: boolean;
+      createdAt: string;
+    }>;
+    bureau: {
+      status: 'PULLED' | 'FAILED' | 'PENDING' | 'CONSENT_REQUIRED' | 'UNAVAILABLE';
+      lastPulledAt?: string | null;
+      provider?: string | null;
+      bureauScore?: number | null;
+      defaultCount?: number | null;
+      judgementCount?: number | null;
+      enquiryCount?: number | null;
+      totalExposure?: number | null;
+      monthlyObligations?: number | null;
+      currentAccounts: Array<Record<string, unknown>>;
+      failureReason?: string | null;
+    };
+  };
+  workflow: {
+    assignee?: string | null;
+    assignedAt?: string | null;
+    ageHours: number;
+    slaStatus: SlaStatus;
+    approvalTier: 'AI_AUTO_ELIGIBLE' | 'ADVISOR_REVIEW' | 'MANAGER_SIGN_OFF';
+    noteCount: number;
+    latestNote?: string | null;
+  };
+  notes: Array<{
+    id: string;
+    actor: string;
+    createdAt: string;
+    note: string;
+  }>;
+  events: Array<{
+    id: string;
+    type: string;
+    actor: string;
+    payload: unknown;
+    createdAt: string;
+  }>;
+  auditTrail: Array<{
+    id: string;
+    actor: string;
+    actorType: string;
+    action: string;
+    before: unknown;
+    after: unknown;
+    createdAt: string;
+  }>;
+  communications: Array<{
+    id: string;
+    type: string;
+    channel: string;
+    subject?: string | null;
+    body: string;
+    status: string;
+    externalRef?: string | null;
+    createdAt: string;
+    sentAt?: string | null;
+  }>;
+  bankAnalysis: {
+    linkedAccountCount: number;
+    verifiedAccountCount: number;
+    statementCount: number;
+    verifiedStatementCount: number;
+    avgMonthlyCreditsCents?: number | null;
+    avgMonthlyDebitsCents?: number | null;
+    lastStatementAt?: string | null;
+    parsedDocumentCount: number;
+  };
 };
 
-const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-  SUBMITTED:            { bg: 'var(--badge-pending-bg)',   fg: 'var(--badge-pending-fg)'   },
-  APPROVED:             { bg: 'var(--badge-approved-bg)',  fg: 'var(--badge-approved-fg)'  },
-  REJECTED:             { bg: 'var(--badge-declined-bg)',  fg: 'var(--badge-declined-fg)'  },
-  PENDING_DISBURSEMENT: { bg: 'var(--badge-awaiting-bg)',  fg: 'var(--badge-awaiting-fg)'  },
+const STATUS_COLORS: Record<WorkflowStatus, { bg: string; fg: string }> = {
+  SUBMITTED: { bg: 'var(--badge-pending-bg)', fg: 'var(--badge-pending-fg)' },
+  APPROVED: { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
+  REJECTED: { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
+  PENDING_DISBURSEMENT: { bg: 'var(--badge-awaiting-bg)', fg: 'var(--badge-awaiting-fg)' },
 };
 
-const DEMO: Record<string, ApplicationDetail> = {
-  a1: {
-    id: 'a1', status: 'SUBMITTED', amountRequested: 2500000, termMonths: 24, submittedAt: '2026-05-14T08:23:00Z',
-    borrower: { id: 'b1', firstName: 'Sipho', lastName: 'Dlamini', email: 'sipho@example.co.za', phone: '+27 82 555 1001', idNumber: '9001015009087', employmentStatus: 'EMPLOYED', monthlyIncome: 3500000, creditScore: 672 },
-    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 1800 },
-  },
-  a2: {
-    id: 'a2', status: 'APPROVED', amountRequested: 12000000, termMonths: 36, submittedAt: '2026-05-13T14:05:00Z',
-    borrower: { id: 'b2', firstName: 'Naledi', lastName: 'Mokoena', email: 'naledi@example.co.za', phone: '+27 71 555 2002', idNumber: '8805105009081', employmentStatus: 'SELF_EMPLOYED', monthlyIncome: 12000000, creditScore: 741 },
-    product:  { name: 'Business Loan', minAmount: 5000000, maxAmount: 50000000, aprBps: 1200 },
-    decision: { id: 'd2', decision: 'APPROVE', pdScore: 0.021, affordabilityRatio: 0.33, decidedAt: '2026-05-13T15:00:00Z' },
-  },
-  a3: {
-    id: 'a3', status: 'PENDING_DISBURSEMENT', amountRequested: 800000, termMonths: 6, submittedAt: '2026-05-13T09:40:00Z',
-    borrower: { id: 'b3', firstName: 'James', lastName: 'van der Merwe', email: 'james@example.co.za', phone: '+27 83 555 3003', idNumber: '9503015009083', employmentStatus: 'EMPLOYED', monthlyIncome: 2500000, creditScore: 598 },
-    product:  { name: 'Short-Term Loan', minAmount: 100000, maxAmount: 2000000, aprBps: 3600 },
-    decision: { id: 'd3', decision: 'APPROVE', pdScore: 0.058, affordabilityRatio: 0.32, decidedAt: '2026-05-13T12:00:00Z' },
-  },
-  a4: {
-    id: 'a4', status: 'REJECTED', amountRequested: 5000000, termMonths: 12, submittedAt: '2026-05-12T16:20:00Z',
-    borrower: { id: 'b4', firstName: 'Fatima', lastName: 'Cassim', email: 'fatima@example.co.za', phone: '+27 79 555 4004', idNumber: '9207205009084', employmentStatus: 'EMPLOYED', monthlyIncome: 1800000, creditScore: 521 },
-    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 2400 },
-    decision: { id: 'd4', decision: 'REJECT', pdScore: 0.142, affordabilityRatio: 0.52, decidedAt: '2026-05-12T17:00:00Z', rejectionReasons: ['Debt-to-income ratio exceeds 40%', 'Affordability check failed'] },
-  },
-  a5: {
-    id: 'a5', status: 'SUBMITTED', amountRequested: 3500000, termMonths: 18, submittedAt: '2026-05-12T11:15:00Z',
-    borrower: { id: 'b5', firstName: 'Thabo', lastName: 'Nkosi', email: 'thabo@example.co.za', phone: '+27 82 555 5005', idNumber: '8812105009085', employmentStatus: 'EMPLOYED', monthlyIncome: 4500000, creditScore: 648 },
-    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 1800 },
-  },
-  a6: {
-    id: 'a6', status: 'APPROVED', amountRequested: 7500000, termMonths: 24, submittedAt: '2026-05-11T10:00:00Z',
-    borrower: { id: 'b6', firstName: 'Lerato', lastName: 'Sithole', email: 'lerato@example.co.za', phone: '+27 71 555 6006', idNumber: '9104105009086', employmentStatus: 'SELF_EMPLOYED', monthlyIncome: 9000000, creditScore: 712 },
-    product:  { name: 'Business Loan', minAmount: 5000000, maxAmount: 50000000, aprBps: 1200 },
-    decision: { id: 'd6', decision: 'APPROVE', pdScore: 0.031, affordabilityRatio: 0.28, decidedAt: '2026-05-11T12:00:00Z' },
-  },
-  a7: {
-    id: 'a7', status: 'SUBMITTED', amountRequested: 1500000, termMonths: 12, submittedAt: '2026-05-11T08:30:00Z',
-    borrower: { id: 'b7', firstName: 'Andile', lastName: 'Zulu', email: 'andile@example.co.za', phone: '+27 83 555 7007', idNumber: '9205055009082', employmentStatus: 'EMPLOYED', monthlyIncome: 2800000, creditScore: 611 },
-    product:  { name: 'Short-Term Loan', minAmount: 100000, maxAmount: 2000000, aprBps: 3600 },
-  },
-  a8: {
-    id: 'a8', status: 'REJECTED', amountRequested: 2000000, termMonths: 6, submittedAt: '2026-05-10T14:45:00Z',
-    borrower: { id: 'b8', firstName: 'Priya', lastName: 'Naidoo', email: 'priya@example.co.za', phone: '+27 79 555 8008', idNumber: '9308205009089', employmentStatus: 'EMPLOYED', monthlyIncome: 2200000, creditScore: 489 },
-    product:  { name: 'Personal Loan', minAmount: 500000, maxAmount: 5000000, aprBps: 2400 },
-    decision: { id: 'd8', decision: 'REJECT', pdScore: 0.198, affordabilityRatio: 0.61, decidedAt: '2026-05-10T16:00:00Z', rejectionReasons: ['Existing default on credit bureau', 'Credit score below minimum threshold'] },
-  },
+const SLA_COLORS: Record<SlaStatus, { bg: string; fg: string }> = {
+  WITHIN_SLA: { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
+  BREACH_SOON: { bg: 'var(--badge-awaiting-bg)', fg: 'var(--badge-awaiting-fg)' },
+  BREACHED: { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
 };
 
-export default function ApplicationDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id }   = use(params);
-  const router   = useRouter();
-  const initial  = DEMO[id] ?? null;
-  const [data,    setData]    = useState<ApplicationDetail | null>(initial);
-  const [loading]             = useState(false);
-  const [error]               = useState<string | null>(initial ? null : 'Application not found.');
-  const [acting,  setActing]  = useState<'approve' | 'reject' | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+function formatStatus(status: string) {
+  return status.replace(/_/g, ' ');
+}
 
-  function act(action: 'approve' | 'reject') {
-    if (!data) return;
-    setActing(action);
-    setActionError(null);
-    setTimeout(() => {
-      setData(prev => prev ? { ...prev, status: action === 'approve' ? 'APPROVED' : 'REJECTED' } : prev);
-      setActing(null);
-    }, 600);
+function formatCurrency(cents?: number | null) {
+  if (cents == null) return '—';
+  return `R ${(cents / 100).toLocaleString('en-ZA')}`;
+}
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleDateString('en-ZA') : '—';
+}
+
+function formatDateTime(value?: string | null) {
+  return value ? new Date(value).toLocaleString('en-ZA') : '—';
+}
+
+function formatTerm(termDays: number) {
+  if (termDays % 30 === 0) return `${termDays / 30} months`;
+  if (termDays % 7 === 0) return `${termDays / 7} weeks`;
+  return `${termDays} days`;
+}
+
+function formatBps(bps?: number | null) {
+  return bps == null ? '—' : `${(bps / 100).toFixed(2)}%`;
+}
+
+function formatRatio(value?: number | null) {
+  return value == null ? '—' : `${value.toFixed(1)}%`;
+}
+
+function summarizePayload(payload: unknown) {
+  if (payload == null) return 'No additional payload';
+  if (typeof payload !== 'object') return String(payload);
+  if (Array.isArray(payload)) return payload.map((item) => String(item)).join(', ');
+
+  const entries = Object.entries(payload as Record<string, unknown>);
+  if (entries.length === 0) return 'No additional payload';
+
+  return entries.map(([key, value]) => {
+    if (Array.isArray(value)) return `${key}: ${value.join(', ')}`;
+    if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`;
+    return `${key}: ${String(value)}`;
+  }).join(' · ');
+}
+
+function formatAge(ageHours: number) {
+  if (ageHours >= 24) {
+    const days = Math.floor(ageHours / 24);
+    const hours = ageHours % 24;
+    return hours === 0 ? `${days}d` : `${days}d ${hours}h`;
   }
 
+  return `${ageHours}h`;
+}
+
+function buildBankStatementNarrative(data: ApplicationDetail) {
+  const signals: string[] = [];
+
+  if (data.bankAnalysis.verifiedAccountCount > 0) {
+    signals.push(`${data.bankAnalysis.verifiedAccountCount} verified bank account${data.bankAnalysis.verifiedAccountCount === 1 ? '' : 's'} linked`);
+  } else if (data.bankAnalysis.linkedAccountCount > 0) {
+    signals.push(`${data.bankAnalysis.linkedAccountCount} linked account${data.bankAnalysis.linkedAccountCount === 1 ? '' : 's'} pending verification`);
+  } else {
+    signals.push('No linked bank accounts available yet');
+  }
+
+  if (data.bankAnalysis.statementCount > 0) {
+    signals.push(`${data.bankAnalysis.verifiedStatementCount}/${data.bankAnalysis.statementCount} statements verified`);
+  } else {
+    signals.push('No bank statements uploaded');
+  }
+
+  if (data.bankAnalysis.avgMonthlyCreditsCents != null) {
+    signals.push(`average monthly credits ${formatCurrency(data.bankAnalysis.avgMonthlyCreditsCents)}`);
+  }
+
+  if (data.bankAnalysis.avgMonthlyDebitsCents != null) {
+    signals.push(`average monthly debits ${formatCurrency(data.bankAnalysis.avgMonthlyDebitsCents)}`);
+  }
+
+  if (data.bankAnalysis.parsedDocumentCount > 0) {
+    signals.push(`${data.bankAnalysis.parsedDocumentCount} parsed document${data.bankAnalysis.parsedDocumentCount === 1 ? '' : 's'} available for extraction`);
+  }
+
+  return signals;
+}
+
+export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [data, setData] = useState<ApplicationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [acting, setActing] = useState<'approve' | 'reject' | null>(null);
+  const [busy, setBusy] = useState<'bureau' | 'assign' | 'note' | 'document' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [reviewRationale, setReviewRationale] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [noteDraft, setNoteDraft] = useState('');
+  const [documentRequest, setDocumentRequest] = useState('Please upload your latest payslip and 3 months of bank statements.');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadApplication() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const headers = await buildOpsApiHeaders();
+        const response = await fetch(`${API}/api/v1/applications/${id}`, {
+          headers,
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => null) as (ApplicationDetail & { error?: string }) | null;
+
+        if (!response.ok) {
+          throw new Error(payload?.error ?? 'Unable to load application.');
+        }
+
+        if (controller.signal.aborted) return;
+        setData(payload);
+      } catch (loadError) {
+        if (controller.signal.aborted) return;
+
+        setData(null);
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load application.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadApplication();
+
+    return () => {
+      controller.abort();
+    };
+  }, [id, refreshKey]);
+
+  useEffect(() => {
+    setAssignedTo(data?.workflow.assignee ?? '');
+  }, [data?.id, data?.workflow.assignee]);
+
+  async function act(action: 'approve' | 'reject') {
+    if (!data) return;
+
+    const overrideReason = action === 'approve'
+      ? data.underwriting.recommendation && data.underwriting.recommendation !== 'APPROVE'
+        ? reviewRationale.trim() || 'Manual approval overrides the latest AI recommendation.'
+        : undefined
+      : data.underwriting.recommendation && data.underwriting.recommendation !== 'DECLINE'
+        ? reviewRationale.trim() || 'Manual decline overrides the latest AI recommendation.'
+        : undefined;
+
+    setActing(action);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const headers = await buildOpsApiHeaders({ 'Content-Type': 'application/json' });
+      const response = await fetch(`${API}/api/v1/applications/${data.id}/${action}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          rationale: reviewRationale.trim() || (action === 'approve' ? 'Approved from the enterprise review workspace.' : 'Declined from the enterprise review workspace.'),
+          reason: action === 'reject' ? (reviewRationale.trim() || 'Application declined from the enterprise review workspace.') : undefined,
+          reasonCodes: action === 'reject' ? ['OPS_WORKSPACE_DECISION'] : undefined,
+          overrideReason,
+        }),
+      });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Unable to ${action} application.`);
+      }
+
+      setNotice(action === 'approve' ? 'Application approved and logged.' : 'Application declined and logged.');
+      setReviewRationale('');
+      setRefreshKey((current) => current + 1);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : `Unable to ${action} application.`);
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function runBureauPull() {
+    if (!data) return;
+
+    setBusy('bureau');
+    setError(null);
+    setNotice(null);
+
+    try {
+      const headers = await buildOpsApiHeaders({ 'Content-Type': 'application/json' });
+      const response = await fetch(`${API}/api/v1/applications/${data.id}/bureau-pull`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Unable to run bureau pull.');
+      }
+
+      setNotice('Bureau pull completed and attached to the application audit trail.');
+      setRefreshKey((current) => current + 1);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to run bureau pull.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function submitEvent(type: 'ASSIGNED' | 'NOTE_ADDED' | 'DOCUMENT_REQUESTED', payload: Record<string, unknown>, successMessage: string) {
+    if (!data) return;
+
+    const stateKey = type === 'ASSIGNED' ? 'assign' : type === 'NOTE_ADDED' ? 'note' : 'document';
+    setBusy(stateKey);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const headers = await buildOpsApiHeaders({ 'Content-Type': 'application/json' });
+      const response = await fetch(`${API}/api/v1/applications/${data.id}/events`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          type,
+          payload,
+        }),
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? 'Unable to update application workflow.');
+      }
+
+      if (type === 'NOTE_ADDED') setNoteDraft('');
+      if (type === 'DOCUMENT_REQUESTED') setDocumentRequest('');
+      setNotice(successMessage);
+      setRefreshKey((current) => current + 1);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Unable to update application workflow.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const borrowerItems: [string, string][] = data ? (data.borrower.type === 'BUSINESS'
+    ? [
+        ['Legal name', data.borrower.business?.legalName ?? data.borrower.displayName],
+        ['Trading name', data.borrower.business?.tradingName ?? '—'],
+        ['Registration', data.borrower.business?.registrationNumber ?? '—'],
+        ['Email', data.borrower.email],
+        ['Phone', data.borrower.phone],
+        ['Industry', data.borrower.business?.industry ?? '—'],
+        ['Founded', formatDate(data.borrower.business?.founded)],
+        ['Monthly turnover', formatCurrency(data.borrower.business?.monthlyTurnover)],
+        ['Employees', data.borrower.business?.numberOfEmployees?.toString() ?? '—'],
+        ['Risk rating', data.borrower.riskRating ?? '—'],
+        ['Blacklist flag', data.borrower.blacklistFlag ? 'Yes' : 'No'],
+      ]
+    : [
+        ['Name', data.borrower.individual?.fullName ?? data.borrower.displayName],
+        ['Email', data.borrower.email],
+        ['Phone', data.borrower.phone],
+        ['ID number', data.borrower.individual?.idNumber ?? '—'],
+        ['Date of birth', formatDate(data.borrower.individual?.dateOfBirth)],
+        ['Employment', data.borrower.individual?.employmentStatus ?? '—'],
+        ['Employer', data.borrower.individual?.employer ?? '—'],
+        ['Occupation', data.borrower.individual?.occupation ?? '—'],
+        ['Monthly income', formatCurrency(data.borrower.individual?.monthlyIncome)],
+        ['Nationality', data.borrower.individual?.nationality ?? '—'],
+        ['Risk rating', data.borrower.riskRating ?? '—'],
+        ['Blacklist flag', data.borrower.blacklistFlag ? 'Yes' : 'No'],
+      ]) : [];
+
   return (
-    <OpsLayout title="Application Detail">
-      {loading && <p className="text-sm" style={{ color: 'var(--color-muted)' }}>Loading…</p>}
-      {error   && <p className="text-sm" style={{ color: 'var(--badge-declined-fg)' }}>{error}</p>}
+    <OpsLayout title="Application Review">
+      {loading && !data && <p className="text-sm" style={{ color: 'var(--color-muted)' }}>Loading application workspace…</p>}
+      {error && <p className="text-sm" style={{ color: 'var(--badge-declined-fg)' }}>{error}</p>}
+      {notice && <p className="text-sm" style={{ color: 'var(--badge-approved-fg)' }}>{notice}</p>}
 
       {data && (
-        <div className="max-w-3xl flex flex-col gap-6">
-          {/* Header */}
+        <div className="max-w-6xl flex flex-col gap-6">
           <div
-            className="rounded-2xl p-6 flex items-center justify-between"
+            className="rounded-2xl p-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
           >
             <div>
-              <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>Application · {data.id.slice(0, 8)}</div>
-              <div className="text-3xl font-black">R {(data.amountRequested / 100).toLocaleString()}</div>
+              <div className="text-xs mb-1" style={{ color: 'var(--color-muted)' }}>
+                Application · {data.referenceNumber}
+              </div>
+              <div className="text-3xl font-black">{formatCurrency(data.amountRequested)}</div>
               <div className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>
-                {data.product?.name ?? '—'} · {data.termMonths} months
-                {data.purpose && ` · ${data.purpose}`}
+                {data.product.name} · {formatTerm(data.termDaysRequested)}
+                {data.purpose ? ` · ${data.purpose}` : ''}
+              </div>
+              <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                Submitted {formatDateTime(data.submittedAt)} · Channel {formatStatus(data.channel)} · Owner {data.workflow.assignee ?? 'Unassigned'}
               </div>
             </div>
-            <div>
-              {(() => {
-                const c = STATUS_COLORS[data.status] ?? { bg: 'var(--color-surface-2)', fg: 'var(--color-muted)' };
-                return (
-                  <span
-                    className="px-4 py-2 rounded-full text-sm font-semibold"
-                    style={{ background: c.bg, color: c.fg }}
-                  >
-                    {data.status.replace(/_/g, ' ')}
-                  </span>
-                );
-              })()}
+
+            <div className="flex flex-col items-start lg:items-end gap-2">
+              <span className="px-4 py-2 rounded-full text-sm font-semibold" style={{ background: STATUS_COLORS[data.workflowStatus].bg, color: STATUS_COLORS[data.workflowStatus].fg }}>
+                {formatStatus(data.workflowStatus)}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: SLA_COLORS[data.workflow.slaStatus].bg, color: SLA_COLORS[data.workflow.slaStatus].fg }}>
+                {data.workflow.slaStatus === 'WITHIN_SLA' ? 'Within SLA' : data.workflow.slaStatus === 'BREACH_SOON' ? 'SLA watch' : 'SLA breached'}
+              </span>
+              <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                Age {formatAge(data.workflow.ageHours)} · Tier {formatStatus(data.workflow.approvalTier)}
+              </div>
+              {data.decidedAt && (
+                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                  Decided {formatDateTime(data.decidedAt)}
+                </div>
+              )}
             </div>
           </div>
 
-          {actionError && (
-            <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}>
-              {actionError}
+          <Card title="Human Override & Decision Controls">
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-medium uppercase tracking-wider block mb-2" style={{ color: 'var(--color-muted)' }}>
+                  Human override reason
+                </label>
+                <textarea
+                  value={reviewRationale}
+                  onChange={(event) => setReviewRationale(event.target.value)}
+                  placeholder="Capture why you are agreeing with or overriding the AI recommendation. This is written into the decision audit trail."
+                  rows={3}
+                  className="w-full rounded-xl px-4 py-3 text-sm"
+                  style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                />
+                <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                  Use this field whenever a human reviewer changes the AI-recommended outcome or wants to add decision context for audit.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {data.canApprove && (
+                  <button
+                    onClick={() => act('approve')}
+                    disabled={acting !== null}
+                    className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                    style={{ background: 'var(--color-primary)', color: '#fff', border: 'none' }}
+                  >
+                    {acting === 'approve' ? 'Approving…' : 'Approve with audit log'}
+                  </button>
+                )}
+                {data.canReject && (
+                  <button
+                    onClick={() => act('reject')}
+                    disabled={acting !== null}
+                    className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                    style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)', border: 'none' }}
+                  >
+                    {acting === 'reject' ? 'Declining…' : 'Decline with audit log'}
+                  </button>
+                )}
+                <button
+                  onClick={runBureauPull}
+                  disabled={busy === 'bureau'}
+                  className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                  style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}
+                >
+                  {busy === 'bureau' ? 'Pulling bureau…' : 'Run bureau pull'}
+                </button>
+              </div>
             </div>
-          )}
+          </Card>
 
-          {/* Action buttons — only for SUBMITTED */}
-          {data.status === 'SUBMITTED' && (
-            <div className="flex gap-3">
-              <button
-                onClick={() => act('approve')}
-                disabled={acting !== null}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--color-primary)', color: '#fff', border: 'none' }}
-              >
-                {acting === 'approve' ? 'Approving…' : 'Approve'}
-              </button>
-              <button
-                onClick={() => act('reject')}
-                disabled={acting !== null}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'var(--color-surface-2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
-              >
-                {acting === 'reject' ? 'Declining…' : 'Decline'}
-              </button>
-            </div>
-          )}
-
-          {/* Borrower info */}
-          {data.borrower && (
-            <Card title="Borrower information">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card title="AI Decisioning">
               <Grid items={[
-                ['Name',       `${data.borrower.firstName} ${data.borrower.lastName}`],
-                ['Email',      data.borrower.email],
-                ['Phone',      data.borrower.phone ?? '—'],
-                ['ID number',  data.borrower.idNumber ?? '—'],
-                ['Employment', data.borrower.employmentStatus ?? '—'],
-                ['Income',     data.borrower.monthlyIncome != null ? `R ${(data.borrower.monthlyIncome / 100).toLocaleString()}/mo` : '—'],
-                ['Credit score', data.borrower.creditScore?.toString() ?? '—'],
+                ['Recommendation', data.underwriting.recommendation ?? 'Pending'],
+                ['Risk score', data.underwriting.riskScore != null ? `${data.underwriting.riskScore}/1000` : '—'],
+                ['Confidence', data.underwriting.confidencePct != null ? `${data.underwriting.confidencePct}%` : '—'],
+                ['Risk band', data.underwriting.riskBand ?? '—'],
+                ['PD score', data.underwriting.pdScore != null ? `${(data.underwriting.pdScore * 100).toFixed(1)}%` : '—'],
+                ['LGD score', data.underwriting.lgdScore != null ? `${(data.underwriting.lgdScore * 100).toFixed(1)}%` : '—'],
+                ['Expected loss', data.underwriting.expectedLoss != null ? data.underwriting.expectedLoss.toFixed(3) : '—'],
+                ['Model version', data.underwriting.modelVersion ?? '—'],
+                ['Recommended amount', formatCurrency(data.underwriting.recommendedOffer.amountCents)],
+                ['Recommended term', formatTerm(data.underwriting.recommendedOffer.termDays)],
+                ['Recommended APR', formatBps(data.underwriting.recommendedOffer.aprBps)],
+                ['Instalment estimate', formatCurrency(data.underwriting.recommendedOffer.estimatedInstallmentCents)],
               ]} />
-            </Card>
-          )}
 
-          {/* Decision info */}
-          {data.decision && (
-            <Card title="Credit decision">
-              <Grid items={[
-                ['Decision',          data.decision.decision],
-                ['PD score',          `${(data.decision.pdScore * 100).toFixed(1)}%`],
-                ['Affordability ratio', `${(data.decision.affordabilityRatio * 100).toFixed(1)}%`],
-                ['Decided at',        new Date(data.decision.decidedAt).toLocaleString('en-ZA')],
-              ]} />
-              {data.decision.rejectionReasons && data.decision.rejectionReasons.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--color-muted)' }}>Rejection reasons</div>
-                  <ul className="list-disc list-inside flex flex-col gap-1">
-                    {data.decision.rejectionReasons.map(r => (
-                      <li key={r} className="text-sm" style={{ color: 'var(--badge-declined-fg)' }}>{r}</li>
-                    ))}
-                  </ul>
+              {data.underwriting.topFactors.length > 0 && (
+                <SectionList title="Top decision factors" items={data.underwriting.topFactors} />
+              )}
+
+              {data.underwriting.reasonCodes.length > 0 && (
+                <SectionList title="Reason codes" items={data.underwriting.reasonCodes} />
+              )}
+
+              {data.underwriting.policyExceptions.length > 0 && (
+                <SectionList title="Policy exceptions" items={data.underwriting.policyExceptions} />
+              )}
+
+              {data.latestDecision?.decisionMaker && (
+                <div className="text-xs mt-4" style={{ color: 'var(--color-muted)' }}>
+                  Last human decision: {data.latestDecision.decisionMaker.fullName} · {formatStatus(data.latestDecision.decisionMaker.role)}
                 </div>
               )}
             </Card>
-          )}
+
+            <Card title="NCA Affordability Assessment">
+              <Grid items={[
+                ['Assessment source', formatStatus(data.affordability.source)],
+                ['Monthly income', formatCurrency(data.affordability.monthlyIncomeCents)],
+                ['Monthly expenses', formatCurrency(data.affordability.monthlyExpensesCents)],
+                ['Monthly obligations', formatCurrency(data.affordability.monthlyObligationsCents)],
+                ['Requested instalment', formatCurrency(data.affordability.requestedInstallmentCents)],
+                ['Disposable income', formatCurrency(data.affordability.disposableIncomeCents)],
+                ['Headroom after commitments', formatCurrency(data.affordability.headroomCents)],
+                ['Debt-to-income ratio', formatRatio(data.affordability.dtiPct)],
+                ['NCA outcome', data.affordability.ncaStatus],
+                ['Affordability result', data.affordability.canAfford == null ? 'Review' : data.affordability.canAfford ? 'Pass' : 'Fail'],
+                ['Avg monthly credits', formatCurrency(data.affordability.avgMonthlyCreditsCents)],
+                ['Avg monthly debits', formatCurrency(data.affordability.avgMonthlyDebitsCents)],
+                ['Statements verified', `${data.affordability.bankStatementsVerified}/${data.affordability.bankStatementsTotal}`],
+                ['Parsed documents', String(data.affordability.parsedDocumentCount)],
+                ['Latest statement', formatDate(data.affordability.lastStatementAt)],
+              ]} />
+
+              <div className="text-xs mt-4" style={{ color: 'var(--color-muted)' }}>
+                This section is the internal NCA affordability view: debt-to-income, disposable income, headroom, and statement-backed affordability source.
+              </div>
+            </Card>
+
+            <Card title="Bank Statement AI Analysis">
+              <Grid items={[
+                ['Linked accounts', String(data.bankAnalysis.linkedAccountCount)],
+                ['Verified accounts', String(data.bankAnalysis.verifiedAccountCount)],
+                ['Statement coverage', `${data.bankAnalysis.verifiedStatementCount}/${data.bankAnalysis.statementCount} verified`],
+                ['Average monthly income signal', formatCurrency(data.bankAnalysis.avgMonthlyCreditsCents)],
+                ['Average monthly expense signal', formatCurrency(data.bankAnalysis.avgMonthlyDebitsCents)],
+                ['Latest statement', formatDate(data.bankAnalysis.lastStatementAt)],
+                ['Parsed supporting documents', String(data.bankAnalysis.parsedDocumentCount)],
+                ['AI extraction status', data.bankAnalysis.statementCount > 0 || data.bankAnalysis.parsedDocumentCount > 0 ? 'Structured inputs available' : 'Awaiting documents'],
+              ]} />
+
+              <SectionList title="Statement-driven signals" items={buildBankStatementNarrative(data)} />
+            </Card>
+
+            <Card title="Compliance & Bureau">
+              <Grid items={[
+                ['KYC pipeline', formatStatus(data.compliance.kycStatus)],
+                ['AML risk', data.compliance.amlRisk],
+                ['Bureau status', formatStatus(data.compliance.bureau.status)],
+                ['Bureau provider', data.compliance.bureau.provider ?? '—'],
+                ['Bureau score', data.compliance.bureau.bureauScore?.toString() ?? '—'],
+                ['Defaults on file', data.compliance.bureau.defaultCount?.toString() ?? '—'],
+                ['Judgements', data.compliance.bureau.judgementCount?.toString() ?? '—'],
+                ['Recent enquiries', data.compliance.bureau.enquiryCount?.toString() ?? '—'],
+                ['Total exposure', data.compliance.bureau.totalExposure != null ? `R ${data.compliance.bureau.totalExposure.toLocaleString('en-ZA')}` : '—'],
+                ['Monthly obligations', data.compliance.bureau.monthlyObligations != null ? `R ${data.compliance.bureau.monthlyObligations.toLocaleString('en-ZA')}` : '—'],
+                ['Last bureau pull', formatDateTime(data.compliance.bureau.lastPulledAt)],
+                ['Failure reason', data.compliance.bureau.failureReason ?? '—'],
+              ]} />
+
+              {data.compliance.kycChecks.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>KYC checks</div>
+                  {data.compliance.kycChecks.map((check) => (
+                    <div key={check.id} className="rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                      <div className="font-semibold">{formatStatus(check.type)} · {formatStatus(check.status)}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                        {check.provider} · Created {formatDateTime(check.createdAt)} · Completed {formatDateTime(check.completedAt)}
+                      </div>
+                      {(check.outcome || check.failureReason) && (
+                        <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                          {check.outcome ?? check.failureReason}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {data.compliance.amlAlerts.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>AML alerts</div>
+                  {data.compliance.amlAlerts.map((alert) => (
+                    <div key={alert.id} className="rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                      <div className="font-semibold">{alert.type} · {alert.severity}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                        {formatDateTime(alert.createdAt)} · SAR filed {alert.filedSar ? 'Yes' : 'No'}
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                        {summarizePayload(alert.details)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {data.compliance.bureau.currentAccounts.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Tradelines</div>
+                  {data.compliance.bureau.currentAccounts.map((account, index) => (
+                    <div key={`${String(account.lender ?? 'account')}-${index}`} className="rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                      <div className="font-semibold">{String(account.lender ?? 'Credit account')} · {String(account.accountType ?? 'Unknown type')}</div>
+                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
+                        Outstanding R {Number(account.outstandingBalance ?? 0).toLocaleString('en-ZA')} · Monthly payment R {Number(account.monthlyPayment ?? 0).toLocaleString('en-ZA')} · Arrears {String(account.arrearsMonths ?? 0)} months
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card title="Workflow & Collaboration">
+              <div className="flex flex-col gap-4">
+                <Grid items={[
+                  ['Assignee', data.workflow.assignee ?? 'Unassigned'],
+                  ['Assigned at', formatDateTime(data.workflow.assignedAt)],
+                  ['Approval tier', formatStatus(data.workflow.approvalTier)],
+                  ['SLA age', formatAge(data.workflow.ageHours)],
+                  ['Latest note', data.workflow.latestNote ?? '—'],
+                  ['Internal note count', String(data.workflow.noteCount)],
+                ]} />
+
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider block mb-2" style={{ color: 'var(--color-muted)' }}>
+                    Assign application owner
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={assignedTo}
+                      onChange={(event) => setAssignedTo(event.target.value)}
+                      placeholder="Enter the reviewer or team name"
+                      className="flex-1 rounded-xl px-4 py-3 text-sm"
+                      style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                    />
+                    <button
+                      onClick={() => submitEvent('ASSIGNED', { assignee: assignedTo, queue: 'underwriting' }, 'Application owner updated.')}
+                      disabled={busy === 'assign'}
+                      className="px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                      style={{ background: 'var(--color-primary)', color: '#fff' }}
+                    >
+                      {busy === 'assign' ? 'Saving…' : 'Assign'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider block mb-2" style={{ color: 'var(--color-muted)' }}>
+                    Internal note
+                  </label>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    placeholder="Capture reviewer context, policy discussions, or escalation notes."
+                    rows={3}
+                    className="w-full rounded-xl px-4 py-3 text-sm"
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                  />
+                  <button
+                    onClick={() => submitEvent('NOTE_ADDED', { note: noteDraft }, 'Internal note added.')}
+                    disabled={busy === 'note'}
+                    className="mt-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                    style={{ background: 'var(--color-surface)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}
+                  >
+                    {busy === 'note' ? 'Adding note…' : 'Add note'}
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider block mb-2" style={{ color: 'var(--color-muted)' }}>
+                    Document request message
+                  </label>
+                  <textarea
+                    value={documentRequest}
+                    onChange={(event) => setDocumentRequest(event.target.value)}
+                    placeholder="Request missing documents from the borrower and keep the request logged inside the platform."
+                    rows={3}
+                    className="w-full rounded-xl px-4 py-3 text-sm"
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                  />
+                  <button
+                    onClick={() => submitEvent('DOCUMENT_REQUESTED', { message: documentRequest, channel: 'EMAIL' }, 'Document request logged and queued for borrower communication.')}
+                    disabled={busy === 'document'}
+                    className="mt-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                    style={{ background: 'var(--color-surface)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}
+                  >
+                    {busy === 'document' ? 'Requesting documents…' : 'Request documents'}
+                  </button>
+                </div>
+
+                {data.notes.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Recent notes</div>
+                    {data.notes.map((note) => (
+                      <div key={note.id} className="rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                        <div className="font-semibold">{note.actor}</div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{formatDateTime(note.createdAt)}</div>
+                        <div className="text-sm mt-2">{note.note}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            <Card title="Borrower Information">
+              <Grid items={borrowerItems} />
+            </Card>
+
+            <Card title="Product & Application Terms">
+              <Grid items={[
+                ['Product', data.product.name],
+                ['Requested amount', formatCurrency(data.amountRequested)],
+                ['Requested term', formatTerm(data.termDaysRequested)],
+                ['Product amount band', `${formatCurrency(data.product.minAmount)} - ${formatCurrency(data.product.maxAmount)}`],
+                ['Product term band', `${formatTerm(data.product.minTermDays)} - ${formatTerm(data.product.maxTermDays)}`],
+                ['Default APR', formatBps(data.product.defaultAprBps)],
+                ['Amortization', formatStatus(data.product.amortizationMethod ?? 'EQUAL_INSTALLMENT')],
+                ['Purpose', data.purpose ?? '—'],
+                ['Channel', formatStatus(data.channel)],
+              ]} />
+            </Card>
+
+            {data.loan && (
+              <Card title="Loan Record">
+                <Grid items={[
+                  ['Loan number', data.loan.loanNumber],
+                  ['Loan status', formatStatus(data.loan.status)],
+                  ['Principal', formatCurrency(data.loan.principal)],
+                  ['APR', formatBps(data.loan.aprBps)],
+                  ['Term', formatTerm(data.loan.termDays)],
+                  ['Start date', formatDate(data.loan.startDate)],
+                  ['Maturity date', formatDate(data.loan.maturityDate)],
+                  ['Disbursed at', formatDateTime(data.loan.disbursedAt)],
+                  ['Outstanding principal', formatCurrency(data.loan.outstandingPrincipal)],
+                  ['Outstanding interest', formatCurrency(data.loan.outstandingInterest)],
+                  ['Outstanding fees', formatCurrency(data.loan.outstandingFees)],
+                ]} />
+              </Card>
+            )}
+
+            <Card title="Borrower Communications">
+              {data.communications.length === 0 ? (
+                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>No in-platform communications logged yet.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {data.communications.map((notification) => (
+                    <div key={notification.id} className="rounded-xl px-4 py-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <div className="text-sm font-semibold">{notification.subject ?? formatStatus(notification.type)}</div>
+                        <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                          {notification.channel} · {notification.status} · {formatDateTime(notification.sentAt ?? notification.createdAt)}
+                        </div>
+                      </div>
+                      <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>{notification.body}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card title="Application Activity">
+              <div className="flex flex-col gap-3">
+                {data.events.map((event) => (
+                  <div key={event.id} className="rounded-xl px-4 py-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                      <div className="text-sm font-semibold">{formatStatus(event.type)}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                        {event.actor} · {formatDateTime(event.createdAt)}
+                      </div>
+                    </div>
+                    <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>{summarizePayload(event.payload)}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card title="Audit Trail">
+              <div className="flex flex-col gap-3">
+                {data.auditTrail.map((entry) => (
+                  <div key={entry.id} className="rounded-xl px-4 py-3" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                      <div className="text-sm font-semibold">{formatStatus(entry.action)}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                        {entry.actor} · {entry.actorType} · {formatDateTime(entry.createdAt)}
+                      </div>
+                    </div>
+                    <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+                      {summarizePayload(entry.after ?? entry.before)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
 
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/applications')}
             className="self-start text-sm font-medium"
             style={{ color: 'var(--color-muted)' }}
           >
@@ -211,13 +961,26 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function Grid({ items }: { items: [string, string][] }) {
   return (
-    <div className="grid grid-cols-2 gap-4 text-sm">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
       {items.map(([label, value]) => (
         <div key={label}>
           <div className="text-xs mb-0.5" style={{ color: 'var(--color-muted)' }}>{label}</div>
           <div className="font-semibold">{value}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SectionList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="mt-4">
+      <div className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--color-muted)' }}>{title}</div>
+      <ul className="list-disc list-inside flex flex-col gap-1">
+        {items.map((item) => (
+          <li key={item} className="text-sm">{item}</li>
+        ))}
+      </ul>
     </div>
   );
 }

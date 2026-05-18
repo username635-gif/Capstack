@@ -12,6 +12,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
+import { authorizeOpsRequest } from '@/lib/ops-auth';
+
+const APPLICATION_WRITE_ROLES = ['ADMIN', 'UNDERWRITER', 'CREDIT_OFFICER'];
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
@@ -21,20 +24,55 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   }
 }
 
+type RejectionBody = {
+  actor?: string;
+  reason?: string;
+  reasonCodes?: string[];
+  overrideReason?: string;
+};
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await authorizeOpsRequest(req, APPLICATION_WRITE_ROLES);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
   const { id } = await params;
 
-  const [parseErr, body] = await to<{ reason?: string; reasonCodes?: string[] }>(req.json());
+  const [parseErr, body] = await to<RejectionBody>(req.json());
   if (parseErr) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 
   // Pattern 4 — destructure with defaults (pattern 3)
-  const { reason = 'Application declined', reasonCodes = [] } = body ?? {};
+  const {
+    actor: inputActor,
+    reason = 'Application declined',
+    reasonCodes = [],
+    overrideReason,
+  } = body ?? {};
+  const actor = auth.identity.actor;
 
   const [loadErr, application] = await to(
-    prisma.application.findUnique({ where: { id } }),
+    prisma.application.findFirst({
+      where: {
+        id,
+        product: { is: { lenderId: auth.identity.lenderId } },
+      },
+      include: {
+        decisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            recommendation: true,
+            modelVersion: true,
+            pdScore: true,
+            riskBand: true,
+          },
+        },
+      },
+    }),
   );
 
   if (loadErr) return NextResponse.json({ error: 'DB error' }, { status: 500 });
@@ -44,6 +82,10 @@ export async function POST(
   if (application.status === 'REJECTED') {
     return NextResponse.json({ error: 'Already rejected' }, { status: 409 });
   }
+
+  const latestDecision = application.decisions[0] ?? null;
+  const modelRecommendation = latestDecision?.recommendation ?? null;
+  const isOverride = modelRecommendation !== null && modelRecommendation !== 'DECLINE';
 
   const [txErr, updated] = await to(
     prisma.$transaction(async (tx) => {
@@ -56,8 +98,35 @@ export async function POST(
         data: {
           applicationId: id,
           type:          'REJECTED',
-          actor:         'SYSTEM',
-          payload:       { reason, reasonCodes },
+          actor,
+          payload:       {
+            reason,
+            reasonCodes,
+            modelRecommendation,
+            overrideReason: overrideReason?.trim() || null,
+            overridden: isOverride,
+            modelVersion: latestDecision?.modelVersion ?? null,
+            pdScore: latestDecision?.pdScore ?? null,
+            riskBand: latestDecision?.riskBand ?? null,
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actor,
+          actorType: 'USER',
+          action: isOverride ? 'APPLICATION_REJECTED_WITH_OVERRIDE' : 'APPLICATION_REJECTED',
+          resource: 'APPLICATION',
+          resourceId: id,
+          after: {
+            status: 'REJECTED',
+            reason,
+            reasonCodes,
+            modelRecommendation,
+            overrideReason: overrideReason?.trim() || null,
+            overridden: isOverride,
+          },
         },
       });
 

@@ -1,145 +1,353 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useEffect, useEffectEvent, useState } from 'react';
 import OpsLayout from './_components/OpsLayout';
+import { API_BASE_URL, buildOpsApiHeaders } from '@/lib/api-client';
 
-const stats = [
-  { label: 'Active loans', value: '1 284', delta: '+12 today' },
-  { label: 'Pending applications', value: '47', delta: '8 urgent' },
-  { label: 'Total disbursed', value: 'R 42.1M', delta: '+R 320k this week' },
-  { label: 'Delinquency rate', value: '3.2%', delta: '-0.4% vs last month' },
-];
-
-const applications = [
-  { id: 'a1', ref: 'APP-2026-04891', borrower: 'Sipho Dlamini', amount: 'R 25 000', product: 'Personal', status: 'Pending review', risk: 'B' },
-  { id: 'a2', ref: 'APP-2026-04890', borrower: 'Naledi Mokoena', amount: 'R 120 000', product: 'Business', status: 'Awaiting docs', risk: 'A' },
-  { id: 'a3', ref: 'APP-2026-04889', borrower: 'James van der Merwe', amount: 'R 8 000', product: 'Short-Term', status: 'Approved', risk: 'C' },
-  { id: 'a4', ref: 'APP-2026-04888', borrower: 'Fatima Cassim', amount: 'R 50 000', product: 'Personal', status: 'Declined', risk: 'D' },
-  { id: 'a5', ref: 'APP-2026-04887', borrower: 'Thabo Nkosi', amount: 'R 35 000', product: 'Personal', status: 'Pending review', risk: 'B' },
-];
-
-const statusColor: Record<string, string> = {
-  'Pending review': 'var(--badge-pending-bg)',
-  'Awaiting docs': 'var(--badge-awaiting-bg)',
-  Approved: 'var(--badge-approved-bg)',
-  Declined: 'var(--badge-declined-bg)',
+type DashboardPayload = {
+  generatedAt: string;
+  portfolio: {
+    totalBookSizeCents: number;
+    portfolioAtRiskPct: number | null;
+    nplRatePct: number | null;
+    activeLoanCount: number;
+  };
+  disbursementVelocity: Array<{
+    week: string;
+    approvedCount: number;
+    disbursedCount: number;
+    disbursedAmountCents: number;
+  }>;
+  aiPerformance: {
+    approvalRatePct: number | null;
+    avgPdPct: number | null;
+    aiAlignedDefaultRatePct: number | null;
+    overrideDefaultRatePct: number | null;
+    overrideApprovalRatePct: number | null;
+  };
+  cohorts: Array<{
+    label: string;
+    loanCount: number;
+    disbursedCount: number;
+    totalPrincipalCents: number;
+    par30Pct: number | null;
+    nplPct: number | null;
+  }>;
 };
 
-const statusFg: Record<string, string> = {
-  'Pending review': 'var(--badge-pending-fg)',
-  'Awaiting docs': 'var(--badge-awaiting-fg)',
-  Approved: 'var(--badge-approved-fg)',
-  Declined: 'var(--badge-declined-fg)',
-};
+function formatCurrency(cents: number | null | undefined) {
+  if (cents == null) return 'R 0';
+  return `R ${(cents / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
+}
+
+function formatPercent(value: number | null | undefined) {
+  if (value == null) return '—';
+  return `${value.toFixed(1)}%`;
+}
+
+function statTone(value: number | null | undefined, lowerIsBetter = false) {
+  if (value == null) return { bg: 'var(--color-surface-2)', fg: 'var(--color-muted)' };
+  if (lowerIsBetter) {
+    return value <= 5
+      ? { bg: '#dcfce7', fg: '#166534' }
+      : value <= 10
+        ? { bg: '#fef3c7', fg: '#92400e' }
+        : { bg: '#fee2e2', fg: '#991b1b' };
+  }
+  return value >= 70
+    ? { bg: '#dcfce7', fg: '#166534' }
+    : value >= 50
+      ? { bg: '#fef3c7', fg: '#92400e' }
+      : { bg: '#fee2e2', fg: '#991b1b' };
+}
 
 export default function OpsHome() {
-  const router = useRouter();
+  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDashboard = useEffectEvent(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const headers = await buildOpsApiHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/v1/dashboard`, {
+        headers,
+        cache: 'no-store',
+      });
+      const payload = await response.json().catch(() => null) as (DashboardPayload & { error?: string }) | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Unable to load portfolio dashboard.');
+      }
+
+      setDashboard(payload);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load portfolio dashboard.');
+      setDashboard(null);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  const latestWeek = dashboard?.disbursementVelocity[dashboard.disbursementVelocity.length - 1] ?? null;
+  const maxWeeklyCount = Math.max(...(dashboard?.disbursementVelocity.map((bucket) => Math.max(bucket.approvedCount, bucket.disbursedCount)) ?? [1]));
+  const maxCohortPrincipal = Math.max(...(dashboard?.cohorts.map((cohort) => cohort.totalPrincipalCents) ?? [1]));
+  const parTone = statTone(dashboard?.portfolio.portfolioAtRiskPct, true);
+  const nplTone = statTone(dashboard?.portfolio.nplRatePct, true);
 
   return (
     <OpsLayout
-      title="Dashboard"
+      title="Portfolio Command Center"
       action={
-        <Link
-          href="/applications/new"
-          className="text-sm px-4 py-2 rounded-lg font-semibold"
-          style={{ background: 'var(--color-primary)', color: '#fff' }}
-        >
-          + New application
-        </Link>
-      }
-    >
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl p-5"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/applications"
+            className="text-sm px-4 py-2 rounded-lg font-semibold"
+            style={{ background: 'var(--color-primary)', color: '#fff' }}
           >
-            <div className="text-xs mb-2" style={{ color: 'var(--color-muted)' }}>
-              {stat.label}
-            </div>
-            <div className="text-2xl font-black">{stat.value}</div>
-            <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-              {stat.delta}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
-      >
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <span className="font-bold">Application queue</span>
-          <Link href="/applications" className="text-xs" style={{ color: 'var(--color-secondary)' }}>
-            View all
+            Review applications
+          </Link>
+          <Link
+            href="/collections"
+            className="text-sm px-4 py-2 rounded-lg font-semibold"
+            style={{ background: 'var(--color-surface-2)', color: 'var(--color-foreground)', border: '1px solid var(--color-border)' }}
+          >
+            Open collections
           </Link>
         </div>
-
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-              {['Reference', 'Borrower', 'Amount', 'Product', 'Risk', 'Status', 'Action'].map((header) => (
-                <th
-                  key={header}
-                  className="text-left px-6 py-3 font-medium text-xs uppercase tracking-wider"
-                  style={{ color: 'var(--color-muted)' }}
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {applications.map((application, index) => (
-              <tr
-                key={application.ref}
-                style={{ borderBottom: index < applications.length - 1 ? '1px solid var(--color-border)' : 'none' }}
-              >
-                <td className="px-6 py-4 font-mono text-xs" style={{ color: 'var(--color-muted)' }}>
-                  {application.ref}
-                </td>
-                <td className="px-6 py-4 font-medium">{application.borrower}</td>
-                <td className="px-6 py-4 font-semibold">{application.amount}</td>
-                <td className="px-6 py-4" style={{ color: 'var(--color-muted)' }}>
-                  {application.product}
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className="font-bold text-xs px-2 py-0.5 rounded"
-                    style={{ background: 'var(--color-surface-2)', color: 'var(--color-secondary)' }}
-                  >
-                    {application.risk}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className="text-xs font-semibold px-2 py-1 rounded-full"
-                    style={{ background: statusColor[application.status], color: statusFg[application.status] }}
-                  >
-                    {application.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => router.push(`/applications/${application.id}`)}
-                    className="text-xs px-3 py-1 rounded-lg font-medium"
-                    style={{
-                      background: 'var(--color-surface-2)',
-                      border: '1px solid var(--color-border)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Review
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      }
+    >
+      <div
+        className="rounded-2xl p-6 mb-6"
+        style={{
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(14, 116, 144, 0.12))',
+          border: '1px solid rgba(14, 116, 144, 0.18)',
+        }}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="text-xs uppercase tracking-[0.24em] mb-2" style={{ color: 'var(--color-secondary)' }}>
+              Live portfolio telemetry
+            </div>
+            <h2 className="text-2xl font-black mb-2">Book quality, disbursement pace, and model drift in one operating view.</h2>
+            <p className="text-sm leading-6" style={{ color: 'var(--color-muted)' }}>
+              The dashboard now reads from live loan performance, approval decisions, and disbursement activity so ops can track current book health, recent funding velocity, and AI-vs-human outcome quality without falling back to demo snapshots.
+            </p>
+          </div>
+          <div className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            {dashboard?.generatedAt ? `Updated ${new Date(dashboard.generatedAt).toLocaleString('en-ZA')}` : 'Waiting for live dashboard data'}
+          </div>
+        </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl p-4 mb-6 text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+          {error}
+        </div>
+      )}
+
+      {loading && !dashboard ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-xl p-5 min-h-[132px] animate-pulse"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+            />
+          ))}
+        </div>
+      ) : dashboard ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Total book size"
+              value={formatCurrency(dashboard.portfolio.totalBookSizeCents)}
+              detail={`${dashboard.portfolio.activeLoanCount} active loans in monitored portfolio`}
+            />
+            <MetricCard
+              label="Portfolio at Risk"
+              value={formatPercent(dashboard.portfolio.portfolioAtRiskPct)}
+              detail="Exposure at 30+ DPD against total outstanding balance"
+              tone={parTone}
+            />
+            <MetricCard
+              label="NPL rate"
+              value={formatPercent(dashboard.portfolio.nplRatePct)}
+              detail="Loans at 90+ DPD or defaulted status"
+              tone={nplTone}
+            />
+            <MetricCard
+              label="Disbursement velocity"
+              value={latestWeek ? `${latestWeek.disbursedCount} funded` : '—'}
+              detail={latestWeek ? `${formatCurrency(latestWeek.disbursedAmountCents)} in the latest weekly bucket` : 'Awaiting weekly disbursement events'}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr] mb-6">
+            <section className="rounded-xl p-6" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+              <div className="flex items-center justify-between mb-5 gap-3">
+                <div>
+                  <h3 className="text-lg font-black">Disbursement Velocity</h3>
+                  <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                    Weekly approvals vs funded loans over the last six buckets.
+                  </p>
+                </div>
+                <div className="text-xs px-3 py-1 rounded-full" style={{ background: 'var(--color-surface-2)', color: 'var(--color-muted)' }}>
+                  Live funding lane
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {dashboard.disbursementVelocity.map((bucket) => (
+                  <div key={bucket.week} className="grid grid-cols-[72px_1fr_auto] gap-3 items-center">
+                    <div className="text-xs font-semibold" style={{ color: 'var(--color-muted)' }}>{bucket.week}</div>
+                    <div className="space-y-2">
+                      <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-2)' }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.max((bucket.approvedCount / maxWeeklyCount) * 100, bucket.approvedCount > 0 ? 8 : 0)}%`, background: '#0f766e' }}
+                        />
+                      </div>
+                      <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-2)' }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.max((bucket.disbursedCount / maxWeeklyCount) * 100, bucket.disbursedCount > 0 ? 8 : 0)}%`, background: '#10b981' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-right text-xs min-w-[120px]" style={{ color: 'var(--color-muted)' }}>
+                      <div>{bucket.approvedCount} approved</div>
+                      <div>{bucket.disbursedCount} funded</div>
+                      <div className="font-semibold" style={{ color: 'var(--color-foreground)' }}>{formatCurrency(bucket.disbursedAmountCents)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-xl p-6" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+              <div className="mb-5">
+                <h3 className="text-lg font-black">AI Model Performance</h3>
+                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                  Approval bias, override share, and downstream default performance from live production decisions.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <PerfTile label="AI approval rate" value={formatPercent(dashboard.aiPerformance.approvalRatePct)} />
+                <PerfTile label="Average PD" value={dashboard.aiPerformance.avgPdPct != null ? `${dashboard.aiPerformance.avgPdPct.toFixed(1)}%` : '—'} />
+                <PerfTile label="Aligned default rate" value={formatPercent(dashboard.aiPerformance.aiAlignedDefaultRatePct)} tone={statTone(dashboard.aiPerformance.aiAlignedDefaultRatePct, true)} />
+                <PerfTile label="Override default rate" value={formatPercent(dashboard.aiPerformance.overrideDefaultRatePct)} tone={statTone(dashboard.aiPerformance.overrideDefaultRatePct, true)} />
+                <PerfTile label="Override share" value={formatPercent(dashboard.aiPerformance.overrideApprovalRatePct)} tone={statTone(100 - (dashboard.aiPerformance.overrideApprovalRatePct ?? 0))} />
+              </div>
+
+              <div className="mt-5 rounded-xl p-4" style={{ background: 'var(--color-surface-2)' }}>
+                <div className="text-xs uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--color-muted)' }}>Interpretation</div>
+                <p className="text-sm leading-6" style={{ color: 'var(--color-muted)' }}>
+                  A widening gap between aligned and overridden default rates is a direct signal that human overrides are either rescuing viable files or weakening model discipline. This panel is intended to make that drift visible before it leaks into arrears.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <section className="rounded-xl p-6" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+            <div className="flex flex-col gap-2 mb-5 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="text-lg font-black">Cohort Performance Over Time</h3>
+                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                  Monthly disbursed cohorts with principal deployed, PAR30, and NPL performance.
+                </p>
+              </div>
+              <Link href="/reports" className="text-sm font-semibold" style={{ color: 'var(--color-secondary)' }}>
+                Open reporting suite
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {dashboard.cohorts.map((cohort) => (
+                <div key={cohort.label} className="grid grid-cols-1 gap-3 rounded-xl p-4 md:grid-cols-[140px_1fr_220px]" style={{ background: 'var(--color-surface-2)' }}>
+                  <div>
+                    <div className="font-semibold">{cohort.label}</div>
+                    <div className="text-xs" style={{ color: 'var(--color-muted)' }}>{cohort.loanCount} loans</div>
+                  </div>
+                  <div>
+                    <div className="h-3 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(15, 118, 110, 0.12)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.max((cohort.totalPrincipalCents / maxCohortPrincipal) * 100, cohort.totalPrincipalCents > 0 ? 8 : 0)}%`, background: '#0f766e' }}
+                      />
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                      {formatCurrency(cohort.totalPrincipalCents)} deployed across {cohort.disbursedCount} funded accounts
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.16em] mb-1" style={{ color: 'var(--color-muted)' }}>PAR30</div>
+                      <div className="font-semibold">{formatPercent(cohort.par30Pct)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.16em] mb-1" style={{ color: 'var(--color-muted)' }}>NPL</div>
+                      <div className="font-semibold">{formatPercent(cohort.nplPct)}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : null}
     </OpsLayout>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: { bg: string; fg: string };
+}) {
+  return (
+    <div className="rounded-xl p-5" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+      <div className="text-xs uppercase tracking-[0.16em] mb-3" style={{ color: 'var(--color-muted)' }}>
+        {label}
+      </div>
+      <div className="text-3xl font-black mb-3">{value}</div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm leading-6" style={{ color: 'var(--color-muted)' }}>{detail}</div>
+        {tone ? <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: tone.bg, color: tone.fg }}>Live</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function PerfTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: { bg: string; fg: string };
+}) {
+  return (
+    <div className="rounded-xl p-4" style={{ background: tone?.bg ?? 'var(--color-surface-2)', color: tone?.fg ?? 'var(--color-foreground)' }}>
+      <div className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: tone?.fg ?? 'var(--color-muted)' }}>
+        {label}
+      </div>
+      <div className="text-xl font-black">{value}</div>
+    </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getSession, clearSession, OpsSession } from '@/lib/session';
+import { getSession, clearSession, loadServerSession, OpsSession } from '@/lib/session';
 import { ThemeToggle } from './ThemeProvider';
 
 const NAV = [
@@ -153,13 +153,35 @@ export default function OpsLayout({
 }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [session,  setSession]  = useState<OpsSession | null>(null);
+  const [session,  setSessionState]  = useState<OpsSession | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
 
   useEffect(() => {
-    const s = getSession();
-    if (!s) { router.replace('/sign-in'); return; }
-    setSession(s);
+    let active = true;
+
+    async function hydrateSession() {
+      const cached = getSession();
+      if (cached && active) {
+        setSessionState(cached);
+      }
+
+      const serverSession = await loadServerSession();
+      if (!active) return;
+
+      if (!serverSession) {
+        await clearSession();
+        router.replace('/sign-in?reason=session_expired');
+        return;
+      }
+
+      setSessionState(serverSession);
+    }
+
+    hydrateSession();
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   if (!session) {
@@ -253,7 +275,7 @@ export default function OpsLayout({
           <div className="text-sm font-semibold mt-0.5">{session.name}</div>
           <div className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>{session.role}</div>
           <button
-            onClick={() => { clearSession(); router.push('/sign-in'); }}
+            onClick={async () => { await clearSession(); router.push('/sign-in'); }}
             className="text-xs mt-1 font-medium text-left"
             style={{ color: 'var(--color-danger)' }}
           >

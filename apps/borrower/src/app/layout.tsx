@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Capstack Borrower",
-  description: "Borrower portal",
+  title: "Capstack Borrower Portal",
+  description: "Apply for personal and business loans online with fast decisions, transparent pricing, and secure borrower self-service.",
 };
 
 export default function RootLayout({

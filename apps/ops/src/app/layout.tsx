@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Capstack Ops",
-  description: "Internal operations dashboard",
+  title: "Capstack Ops Console",
+  description: "Internal credit operations workspace for loan review, servicing, collections, and portfolio oversight.",
 };
 
 export default function RootLayout({

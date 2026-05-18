@@ -80,7 +80,7 @@ export interface NotificationResult {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
+async function attempt<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try {
     return [null, await p];
   } catch (err) {
@@ -88,9 +88,48 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   }
 }
 
+function _getDeliveryMode(): 'stub' | 'live' {
+  return (process.env.NOTIFICATION_DELIVERY_MODE ?? 'stub').toLowerCase() === 'live'
+    ? 'live'
+    : 'stub';
+}
+
 // ─── Channel implementations (stubs) ─────────────────────────────────────────
 
 async function _sendSms(to: string, body: string): Promise<string> {
+  if (_getDeliveryMode() === 'live') {
+    const apiKey = process.env.CLICKATELL_API_KEY;
+    if (!apiKey) {
+      throw new Error('CLICKATELL_API_KEY is required when NOTIFICATION_DELIVERY_MODE=live');
+    }
+
+    const [sendErr, response] = await attempt(
+      fetch('https://platform.clickatell.com/messages/http/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          text: body,
+          to: [to],
+          from: process.env.CLICKATELL_SENDER_ID ?? 'Capstack',
+        }),
+      }),
+    );
+    if (sendErr) throw sendErr;
+    if (!response!.ok) {
+      throw new Error(`Clickatell send failed with status ${response!.status}`);
+    }
+
+    const payload = await response!.json() as {
+      messages?: Array<{ apiMessageId?: string }>;
+      data?: { messageId?: string };
+    };
+
+    return payload.messages?.[0]?.apiMessageId ?? payload.data?.messageId ?? `sms_${Date.now()}`;
+  }
+
   // Production: POST to Clickatell or Infobip
   //
   //   const res = await fetch('https://platform.clickatell.com/messages/http/send', {
@@ -129,6 +168,36 @@ async function _sendPush(to: string, subject: string, body: string): Promise<str
 }
 
 async function _sendEmail(to: string, subject: string, body: string): Promise<string> {
+  if (_getDeliveryMode() === 'live') {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is required when NOTIFICATION_DELIVERY_MODE=live');
+    }
+
+    const [sendErr, response] = await attempt(
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL ?? 'Capstack <noreply@capstack.co.za>',
+          to: [to],
+          subject,
+          html: `<p>${body}</p>`,
+        }),
+      }),
+    );
+    if (sendErr) throw sendErr;
+    if (!response!.ok) {
+      throw new Error(`Resend send failed with status ${response!.status}`);
+    }
+
+    const payload = await response!.json() as { id?: string };
+    return payload.id ?? `email_${Date.now()}`;
+  }
+
   // Production: use Resend
   //
   //   const resend = new Resend(process.env.RESEND_API_KEY);
@@ -145,6 +214,37 @@ async function _sendEmail(to: string, subject: string, body: string): Promise<st
 }
 
 async function _sendWhatsApp(to: string, body: string): Promise<string> {
+  if (_getDeliveryMode() === 'live') {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const fromNumber = process.env.TWILIO_WHATSAPP_NUMBER;
+    if (!accountSid || !authToken || !fromNumber) {
+      throw new Error('Twilio WhatsApp credentials are required when NOTIFICATION_DELIVERY_MODE=live');
+    }
+
+    const [sendErr, response] = await attempt(
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          From: `whatsapp:${fromNumber}`,
+          To: `whatsapp:${to}`,
+          Body: body,
+        }).toString(),
+      }),
+    );
+    if (sendErr) throw sendErr;
+    if (!response!.ok) {
+      throw new Error(`Twilio WhatsApp send failed with status ${response!.status}`);
+    }
+
+    const payload = await response!.json() as { sid?: string };
+    return payload.sid ?? `wa_${Date.now()}`;
+  }
+
   // Production: use Twilio WhatsApp API
   //
   //   const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -182,7 +282,7 @@ export async function sendNotification(
   }
 
   // Pattern 2 — ternary chain for channel routing
-  const [sendErr, externalRef] = await to(
+  const [sendErr, externalRef] = await attempt(
     payload.channel === 'SMS'
       ? _sendSms(payload.to, payload.body)
       : payload.channel === 'PUSH'

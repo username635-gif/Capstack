@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (DEMO_MODE) {
     if (email.toLowerCase() !== DEMO_EMAIL) {
       return NextResponse.json(
-        { error: `Demo mode: use ${DEMO_EMAIL} to sign in` },
+        { error: 'Demo access is restricted to the provisioned internal account.' },
         { status: 401 },
       );
     }

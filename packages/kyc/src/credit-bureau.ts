@@ -77,6 +77,22 @@ export interface SoftPullResult {
   rawResponse?:    Record<string, unknown>;
 }
 
+export type BureauMode = 'mock' | 'live';
+export type BureauProvider = 'EXPERIAN' | 'TRANSUNION' | 'XDS' | 'MOCK';
+
+type BureauConfig = {
+  mode: BureauMode;
+  provider: BureauProvider;
+  baseUrl: string | null;
+  authPath: string | null;
+  enquiryPath: string | null;
+  clientId: string | null;
+  clientSecret: string | null;
+  apiKey: string | null;
+  apiKeyHeader: string;
+  providerLabel: string;
+};
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
@@ -85,6 +101,329 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   } catch (err) {
     return [err instanceof Error ? err : new Error(String(err)), null];
   }
+}
+
+function _getBureauConfig(): BureauConfig {
+  const mode = (process.env.BUREAU_MODE ?? 'mock').toLowerCase() === 'live' ? 'live' : 'mock';
+  const requestedProvider = (process.env.BUREAU_PROVIDER ?? 'EXPERIAN').toUpperCase();
+
+  if (mode === 'mock') {
+    return {
+      mode,
+      provider: 'MOCK',
+      baseUrl: null,
+      authPath: null,
+      enquiryPath: null,
+      clientId: null,
+      clientSecret: null,
+      apiKey: null,
+      apiKeyHeader: 'x-api-key',
+      providerLabel: `MOCK_${requestedProvider}`,
+    };
+  }
+
+  if (requestedProvider === 'TRANSUNION') {
+    return {
+      mode,
+      provider: 'TRANSUNION',
+      baseUrl: process.env.TRANSUNION_BASE_URL ?? null,
+      authPath: process.env.TRANSUNION_AUTH_PATH ?? null,
+      enquiryPath: process.env.TRANSUNION_SOFT_PULL_PATH ?? null,
+      clientId: process.env.TRANSUNION_CLIENT_ID ?? null,
+      clientSecret: process.env.TRANSUNION_CLIENT_SECRET ?? null,
+      apiKey: process.env.TRANSUNION_API_KEY ?? null,
+      apiKeyHeader: process.env.TRANSUNION_API_KEY_HEADER ?? 'x-api-key',
+      providerLabel: 'TRANSUNION',
+    };
+  }
+
+  if (requestedProvider === 'XDS') {
+    return {
+      mode,
+      provider: 'XDS',
+      baseUrl: process.env.XDS_BASE_URL ?? null,
+      authPath: process.env.XDS_AUTH_PATH ?? null,
+      enquiryPath: process.env.XDS_SOFT_PULL_PATH ?? null,
+      clientId: process.env.XDS_CLIENT_ID ?? null,
+      clientSecret: process.env.XDS_CLIENT_SECRET ?? null,
+      apiKey: process.env.XDS_API_KEY ?? null,
+      apiKeyHeader: process.env.XDS_API_KEY_HEADER ?? 'x-api-key',
+      providerLabel: 'XDS',
+    };
+  }
+
+  return {
+    mode,
+    provider: 'EXPERIAN',
+    baseUrl: process.env.EXPERIAN_BASE_URL ?? null,
+    authPath: process.env.EXPERIAN_AUTH_PATH ?? '/oauth/token',
+    enquiryPath: process.env.EXPERIAN_SOFT_PULL_PATH ?? '/v1/credit-report/soft-pull',
+    clientId: process.env.EXPERIAN_CLIENT_ID ?? null,
+    clientSecret: process.env.EXPERIAN_CLIENT_SECRET ?? null,
+    apiKey: process.env.EXPERIAN_API_KEY ?? null,
+    apiKeyHeader: process.env.EXPERIAN_API_KEY_HEADER ?? 'x-api-key',
+    providerLabel: 'EXPERIAN',
+  };
+}
+
+function _joinUrl(baseUrl: string, path: string): string {
+  return new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
+}
+
+function _coerceObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function _getPath(source: unknown, path: readonly string[]): unknown {
+  let current: unknown = source;
+  for (const segment of path) {
+    const objectValue = _coerceObject(current);
+    if (!objectValue || !(segment in objectValue)) {
+      return null;
+    }
+
+    current = objectValue[segment];
+  }
+
+  return current;
+}
+
+function _pickNumber(source: unknown, paths: ReadonlyArray<readonly string[]>): number | null {
+  for (const path of paths) {
+    const value = _getPath(source, path);
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+  }
+  return null;
+}
+
+function _pickString(source: unknown, paths: ReadonlyArray<readonly string[]>): string | null {
+  for (const path of paths) {
+    const value = _getPath(source, path);
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+  }
+  return null;
+}
+
+function _pickArray(source: unknown, paths: ReadonlyArray<readonly string[]>): unknown[] {
+  for (const path of paths) {
+    const value = _getPath(source, path);
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+  return [];
+}
+
+function _mapAccount(rawAccount: unknown): CreditAccount | null {
+  const account = _coerceObject(rawAccount);
+  if (!account) {
+    return null;
+  }
+
+  return {
+    accountType: _pickString(account, [['accountType'], ['type'], ['productType']]) ?? 'UNKNOWN',
+    lender: _pickString(account, [['lender'], ['provider'], ['creditProvider'], ['institution']]) ?? 'Unknown bureau account',
+    outstandingBalance: _pickNumber(account, [['outstandingBalance'], ['balance'], ['currentBalance'], ['amountOutstanding']]) ?? 0,
+    monthlyPayment: _pickNumber(account, [['monthlyPayment'], ['installment'], ['repaymentAmount'], ['minimumPayment']]) ?? 0,
+    arrearsMonths: _pickNumber(account, [['arrearsMonths'], ['monthsInArrears'], ['paymentHistory', 'arrearsMonths']]) ?? 0,
+    openedDate: _pickString(account, [['openedDate'], ['openDate'], ['accountOpenedAt']]) ?? new Date().toISOString().slice(0, 10),
+  };
+}
+
+function _mapLiveResponse(
+  borrowerId: string,
+  providerLabel: string,
+  rawResponse: unknown,
+): SoftPullResult {
+  const rawObject = _coerceObject(rawResponse) ?? { rawResponse };
+  const currentAccounts = _pickArray(rawObject, [
+    ['currentAccounts'],
+    ['accounts'],
+    ['tradeLines'],
+    ['report', 'accounts'],
+    ['report', 'tradeLines'],
+  ])
+    .map(_mapAccount)
+    .filter((account): account is CreditAccount => account !== null);
+
+  const totalExposure = _pickNumber(rawObject, [
+    ['totalExposure'],
+    ['summary', 'totalExposure'],
+    ['report', 'summary', 'totalExposure'],
+  ]) ?? currentAccounts.reduce((sum, account) => sum + account.outstandingBalance, 0);
+
+  const monthlyObligations = _pickNumber(rawObject, [
+    ['monthlyObligations'],
+    ['summary', 'monthlyObligations'],
+    ['report', 'summary', 'monthlyObligations'],
+  ]) ?? currentAccounts.reduce((sum, account) => sum + account.monthlyPayment, 0);
+
+  return {
+    borrowerId,
+    bureauScore: _pickNumber(rawObject, [
+      ['bureauScore'],
+      ['score'],
+      ['scoreValue'],
+      ['creditScore'],
+      ['summary', 'bureauScore'],
+      ['report', 'summary', 'bureauScore'],
+    ]) ?? 0,
+    scoreDate: _pickString(rawObject, [
+      ['scoreDate'],
+      ['reportDate'],
+      ['generatedAt'],
+      ['summary', 'scoreDate'],
+    ]) ?? new Date().toISOString().slice(0, 10),
+    defaultCount: _pickNumber(rawObject, [
+      ['defaultCount'],
+      ['defaults'],
+      ['summary', 'defaultCount'],
+      ['report', 'summary', 'defaultCount'],
+    ]) ?? 0,
+    judgementCount: _pickNumber(rawObject, [
+      ['judgementCount'],
+      ['judgments'],
+      ['judgements'],
+      ['summary', 'judgementCount'],
+      ['report', 'summary', 'judgementCount'],
+    ]) ?? 0,
+    enquiryCount: _pickNumber(rawObject, [
+      ['enquiryCount'],
+      ['inquiryCount'],
+      ['enquiries'],
+      ['summary', 'enquiryCount'],
+      ['report', 'summary', 'enquiryCount'],
+    ]) ?? 0,
+    currentAccounts,
+    totalExposure,
+    monthlyObligations,
+    provider: providerLabel,
+    rawResponse: rawObject,
+  };
+}
+
+async function _fetchAccessToken(config: BureauConfig): Promise<string | null> {
+  if (!config.baseUrl || !config.authPath) {
+    return null;
+  }
+
+  if (!config.clientId || !config.clientSecret) {
+    return null;
+  }
+
+  const [authErr, response] = await to(
+    fetch(_joinUrl(config.baseUrl, config.authPath), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+    }),
+  );
+  if (authErr) {
+    throw authErr;
+  }
+
+  if (!response!.ok) {
+    throw new Error(`Bureau auth failed with status ${response!.status}`);
+  }
+
+  const authPayload = await response!.json() as Record<string, unknown>;
+  const accessToken = _pickString(authPayload, [['access_token'], ['token'], ['data', 'access_token']]);
+  if (!accessToken) {
+    throw new Error('Bureau auth succeeded but returned no access token');
+  }
+
+  return accessToken;
+}
+
+async function _performLiveSoftPull(input: SoftPullInput, config: BureauConfig): Promise<SoftPullResult> {
+  if (!config.baseUrl || !config.enquiryPath) {
+    throw new Error(`performSoftPull: ${config.providerLabel} live mode requires base URL and enquiry path`);
+  }
+
+  const accessToken = await _fetchAccessToken(config);
+  if (!accessToken && !config.apiKey) {
+    throw new Error(`performSoftPull: ${config.providerLabel} live mode requires OAuth credentials or API key`);
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  } else if (config.apiKey) {
+    headers[config.apiKeyHeader] = config.apiKey;
+  }
+
+  const [pullErr, response] = await to(
+    fetch(_joinUrl(config.baseUrl, config.enquiryPath), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        borrowerId: input.borrowerId,
+        idNumber: input.idNumber,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        enquiryType: 'SOFT',
+      }),
+    }),
+  );
+  if (pullErr) {
+    throw pullErr;
+  }
+
+  if (!response!.ok) {
+    const body = await response!.text();
+    throw new Error(`Bureau soft pull failed with status ${response!.status}: ${body.slice(0, 200)}`);
+  }
+
+  const rawResponse = await response!.json();
+  return _mapLiveResponse(input.borrowerId, config.providerLabel, rawResponse);
+}
+
+function _performMockSoftPull(input: SoftPullInput, providerLabel: string): SoftPullResult {
+  const lastDigit = parseInt(input.idNumber[12] ?? '0', 10);
+  const bureauScore = lastDigit % 2 === 0 ? 720 : 610;
+
+  const stubAccounts: CreditAccount[] = [
+    {
+      accountType: 'PERSONAL_LOAN',
+      lender: 'Stub Bank',
+      outstandingBalance: 15000,
+      monthlyPayment: 950,
+      arrearsMonths: 0,
+      openedDate: '2023-06-01',
+    },
+  ];
+
+  const totalExposure = stubAccounts.reduce((sum, account) => sum + account.outstandingBalance, 0);
+  const monthlyObligations = stubAccounts.reduce((sum, account) => sum + account.monthlyPayment, 0);
+
+  return {
+    borrowerId: input.borrowerId,
+    bureauScore,
+    scoreDate: new Date().toISOString().slice(0, 10),
+    defaultCount: 0,
+    judgementCount: 0,
+    enquiryCount: 2,
+    currentAccounts: stubAccounts,
+    totalExposure,
+    monthlyObligations,
+    provider: providerLabel,
+  };
 }
 
 // ─── Implementation (stub — replace with real bureau call) ───────────────────
@@ -104,6 +443,8 @@ export async function performSoftPull(input: SoftPullInput): Promise<SoftPullRes
   if (!input.borrowerId || !input.idNumber) {
     throw new Error('performSoftPull: borrowerId and idNumber are required');
   }
+
+  const config = _getBureauConfig();
 
   // Production: authenticate then query
   //
@@ -142,39 +483,9 @@ export async function performSoftPull(input: SoftPullInput): Promise<SoftPullRes
   //   if (enquiryErr) throw enquiryErr;
   //   return _mapExperianResponse(input.borrowerId, raw);
 
-  // ── Stub: deterministic mock based on ID number last digit ────────────────
-  // ID numbers ending in even digit → good score; odd → fair score.
-  // This lets the QA team test both approval and decline flows in demo mode.
-  const lastDigit = parseInt(input.idNumber[12] ?? '0', 10);
-  const bureauScore = lastDigit % 2 === 0 ? 720 : 610;
-
-  const stubAccounts: CreditAccount[] = [
-    {
-      accountType:       'PERSONAL_LOAN',
-      lender:            'Stub Bank',
-      outstandingBalance: 15000,
-      monthlyPayment:    950,
-      arrearsMonths:     0,
-      openedDate:        '2023-06-01',
-    },
-  ];
-
-  const totalExposure      = stubAccounts.reduce((s, a) => s + a.outstandingBalance, 0);
-  const monthlyObligations = stubAccounts.reduce((s, a) => s + a.monthlyPayment, 0);
-
-  // Pattern 7 — shorthand
-  return {
-    borrowerId:      input.borrowerId,
-    bureauScore,
-    scoreDate:       new Date().toISOString().slice(0, 10),
-    defaultCount:    0,
-    judgementCount:  0,
-    enquiryCount:    2,
-    currentAccounts: stubAccounts,
-    totalExposure,
-    monthlyObligations,
-    provider:        'stub',
-  };
+  return config.mode === 'live'
+    ? _performLiveSoftPull(input, config)
+    : _performMockSoftPull(input, config.providerLabel);
 }
 
 /**

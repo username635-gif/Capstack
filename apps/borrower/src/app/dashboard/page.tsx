@@ -428,7 +428,7 @@ function DashboardContent() {
       <footer style={{ borderTop: '1px solid var(--color-border)', marginTop: 'auto' }}>
         <div className="max-w-5xl mx-auto px-6 py-5 flex justify-between text-xs" style={{ color: 'var(--color-muted)' }}>
           <span>© 2026 Capstack Financial Services</span>
-          <span>NCR Registered · FSP 12345</span>
+          <span>NCR Registered · FSP registration pending</span>
         </div>
       </footer>
     </div>

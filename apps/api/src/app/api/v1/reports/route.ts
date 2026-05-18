@@ -1,271 +1,493 @@
-/**
- * GET /api/v1/reports
- *
- * NCR / FICA / NCA regulatory reporting endpoint.
- *
- * REPORTS GENERATED:
- *
- *   ncr_monthly      — NCR (National Credit Regulator) monthly return:
- *     - Total credit agreements entered into (count + value)
- *     - Total credit agreements cancelled
- *     - Number of accounts in arrears per product type
- *     - Average interest rate per product type
- *     Required by: NCA (National Credit Act) s.52, filed monthly
- *
- *   fica_ctr         — FICA Cash Threshold Report:
- *     - All cash transactions ≥ R24 999 in the period.
- *     Required by: FICA s.28, filed within 2 business days
- *
- *   fica_sar         — FICA Suspicious Activity Report (SAR) log:
- *     - All AML alerts marked sarRequired = true.
- *     Required by: FICA s.29, filed within 3 business days
- *
- *   nca_affordability — NCA affordability assessment summary:
- *     - Average DTI per product
- *     - Policy violation reasons (for declined applications)
- *     - Gross income vs net income distributions
- *     Required by: NCA s.81 reckless lending prevention
- *
- *   ifrs9_ecl        — IFRS 9 ECL (Expected Credit Loss) provisioning snapshot:
- *     - Stage 1 / 2 / 3 loan counts and provision amounts
- *     Required by: IFRS 9 (IASB) quarterly financial reporting
- *
- * ACCESS CONTROL:
- *   Only users with role = 'COMPLIANCE' or 'ADMIN' may access this endpoint.
- *   Clerk session token required in the Authorization header.
- *
- * Patterns applied:
- *   1. Early return — unauthorized, missing params
- *   4. Destructuring — searchParams
- *   5. Array methods — reduce for aggregations
- *   6. to() helper
- *   7. Property shorthand
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@capstack/db';
 import { computeEcl } from '@capstack/ledger';
+import { authorizeOpsRequest } from '@/lib/ops-auth';
+import { buildCollectionsInsight, buildCollectionsSummary } from '@/lib/collections-review';
 
 async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   try { return [null, await p]; }
   catch (err) { return [err instanceof Error ? err : new Error(String(err)), null]; }
 }
 
-type ReportType = 'ncr_monthly' | 'fica_ctr' | 'fica_sar' | 'nca_affordability' | 'ifrs9_ecl';
+type ReportType =
+  | 'portfolio_summary'
+  | 'ncr_monthly'
+  | 'fica_ctr'
+  | 'fica_sar'
+  | 'nca_affordability'
+  | 'ifrs9_ecl';
+
+const VALID_TYPES: ReportType[] = [
+  'portfolio_summary',
+  'ncr_monthly',
+  'fica_ctr',
+  'fica_sar',
+  'nca_affordability',
+  'ifrs9_ecl',
+];
+
+const REPORT_ROLES = ['ADMIN', 'COMPLIANCE', 'FINANCE', 'READONLY'];
 
 export async function GET(req: NextRequest) {
-  // ── Auth — require COMPLIANCE or ADMIN role ───────────────────────────────
-  // In production wire this to Clerk's getAuth() method
-  const authHeader = req.headers.get('authorization') ?? '';
-  if (!authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await authorizeOpsRequest(req, REPORT_ROLES);
+  if (!auth.ok) {
+    return auth.response;
   }
 
-  // ── Query params ──────────────────────────────────────────────────────────
   const { searchParams } = new URL(req.url);
-  const reportType = (searchParams.get('type') ?? '') as ReportType;
-  const periodFrom = searchParams.get('from') ?? _defaultFrom();   // ISO date string
-  const periodTo   = searchParams.get('to')   ?? new Date().toISOString().slice(0, 10);
+  const reportType = (searchParams.get('type') ?? 'portfolio_summary') as ReportType;
+  const periodFrom = searchParams.get('from') ?? _defaultFrom();
+  const periodTo = searchParams.get('to') ?? new Date().toISOString().slice(0, 10);
 
-  const validTypes: ReportType[] = ['ncr_monthly', 'fica_ctr', 'fica_sar', 'nca_affordability', 'ifrs9_ecl'];
-
-  // Pattern 1 — early return on invalid type
-  if (!validTypes.includes(reportType)) {
+  if (!VALID_TYPES.includes(reportType)) {
     return NextResponse.json({
-      error:       'Missing or invalid ?type parameter',
-      validTypes,
-      example:     '/api/v1/reports?type=ncr_monthly&from=2026-05-01&to=2026-05-31',
+      error: 'Missing or invalid ?type parameter',
+      validTypes: VALID_TYPES,
+      example: '/api/v1/reports?type=portfolio_summary&from=2026-05-01&to=2026-05-31',
     }, { status: 400 });
   }
 
   const from = new Date(periodFrom);
-  const to_  = new Date(periodTo);
+  const until = new Date(periodTo);
+
+  if (Number.isNaN(from.getTime()) || Number.isNaN(until.getTime())) {
+    return NextResponse.json({ error: 'Invalid date range' }, { status: 400 });
+  }
 
   switch (reportType) {
-    case 'ncr_monthly':      return _ncrMonthly(from, to_);
-    case 'fica_ctr':         return _ficaCtr(from, to_);
-    case 'fica_sar':         return _ficaSar(from, to_);
-    case 'nca_affordability': return _ncaAffordability(from, to_);
-    case 'ifrs9_ecl':        return _ifrs9Ecl();
+    case 'portfolio_summary': return _portfolioSummary(from, until);
+    case 'ncr_monthly': return _ncrMonthly(from, until);
+    case 'fica_ctr': return _ficaCtr(from, until);
+    case 'fica_sar': return _ficaSar(from, until);
+    case 'nca_affordability': return _ncaAffordability(from, until);
+    case 'ifrs9_ecl': return _ifrs9Ecl(from, until);
     default:
       return NextResponse.json({ error: 'Unknown report type' }, { status: 400 });
   }
 }
 
-// ─── NCR Monthly Return ───────────────────────────────────────────────────────
+async function _portfolioSummary(from: Date, until: Date) {
+  const [loanErr, loans] = await to(
+    prisma.loan.findMany({
+      where: {
+        status: { in: ['ACTIVE', 'DEFAULTED', 'RESTRUCTURED', 'PENDING_DISBURSEMENT'] },
+      },
+      include: {
+        product: { select: { name: true } },
+        application: {
+          include: {
+            decisions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { pdScore: true },
+            },
+          },
+        },
+        collections: { orderBy: { createdAt: 'desc' }, take: 20 },
+      },
+    }),
+  );
+  const [decisionErr, decisions] = await to(
+    prisma.creditDecision.findMany({
+      where: { createdAt: { gte: from, lte: until } },
+      select: { recommendation: true, pdScore: true, riskBand: true },
+    }),
+  );
+  const [amlErr, amlAlerts] = await to(
+    prisma.amlAlert.findMany({
+      where: { createdAt: { gte: from, lte: until } },
+      select: { severity: true, status: true },
+    }),
+  );
+  const [eclErr, ecl] = await to(computeEcl());
+
+  if (loanErr || decisionErr || amlErr || eclErr) {
+    return NextResponse.json({
+      error: loanErr?.message ?? decisionErr?.message ?? amlErr?.message ?? eclErr?.message ?? 'Failed to generate portfolio summary',
+    }, { status: 500 });
+  }
+
+  const portfolioLoans = loans ?? [];
+  const outstandingFor = (loan: { outstandingPrincipal: bigint; outstandingInterest: bigint; outstandingFees: bigint }) =>
+    Number(loan.outstandingPrincipal) + Number(loan.outstandingInterest) + Number(loan.outstandingFees);
+
+  const totalOutstandingCents = portfolioLoans.reduce((sum, loan) => sum + outstandingFor(loan), 0);
+  const loansInArrears = portfolioLoans.filter((loan) => loan.daysPastDue > 0);
+  const arrearsOutstandingCents = loansInArrears.reduce((sum, loan) => sum + outstandingFor(loan), 0);
+  const par30ExposureCents = portfolioLoans
+    .filter((loan) => loan.daysPastDue >= 30)
+    .reduce((sum, loan) => sum + outstandingFor(loan), 0);
+  const par90ExposureCents = portfolioLoans
+    .filter((loan) => loan.daysPastDue >= 90)
+    .reduce((sum, loan) => sum + outstandingFor(loan), 0);
+
+  const collections = buildCollectionsSummary(
+    loansInArrears.map((loan) => buildCollectionsInsight({
+      loanId: loan.id,
+      daysPastDue: loan.daysPastDue,
+      delinquencyState: loan.delinquencyState,
+      outstandingPrincipalCents: Number(loan.outstandingPrincipal),
+      outstandingInterestCents: Number(loan.outstandingInterest),
+      outstandingFeesCents: Number(loan.outstandingFees),
+      latestDecision: loan.application?.decisions[0] ?? null,
+      events: loan.collections,
+    })),
+  );
+
+  const riskBandCounts = (decisions ?? []).reduce<Record<string, number>>((accumulator, decision) => {
+    accumulator[decision.riskBand] = (accumulator[decision.riskBand] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+  const approvalCount = (decisions ?? []).filter((decision) => decision.recommendation === 'APPROVE').length;
+  const avgPdPct = (decisions ?? []).length
+    ? Math.round(((decisions ?? []).reduce((sum, decision) => sum + decision.pdScore, 0) / (decisions ?? []).length) * 1000) / 10
+    : null;
+
+  const productExposure = portfolioLoans.reduce<Record<string, { count: number; outstandingCents: number }>>((accumulator, loan) => {
+    const key = loan.product?.name ?? 'Unknown';
+    if (!accumulator[key]) {
+      accumulator[key] = { count: 0, outstandingCents: 0 };
+    }
+    accumulator[key].count += 1;
+    accumulator[key].outstandingCents += outstandingFor(loan);
+    return accumulator;
+  }, {});
+
+  return NextResponse.json({
+    reportType: 'Portfolio Summary',
+    period: _formatPeriod(from, until),
+    generatedAt: new Date().toISOString(),
+    kpis: {
+      activeLoans: portfolioLoans.length,
+      loansInArrears: loansInArrears.length,
+      totalOutstandingCents,
+      arrearsOutstandingCents,
+      par30Pct: _safePct(par30ExposureCents, totalOutstandingCents),
+      par90Pct: _safePct(par90ExposureCents, totalOutstandingCents),
+      nplCount: portfolioLoans.filter((loan) => loan.daysPastDue >= 90 || loan.delinquencyState === 'NPL').length,
+      highRiskAmlAlerts: (amlAlerts ?? []).filter((alert) => alert.severity === 'HIGH').length,
+      openAmlAlerts: (amlAlerts ?? []).filter((alert) => alert.status === 'OPEN').length,
+      approvalRatePct: _safePct(approvalCount, (decisions ?? []).length),
+      avgPdPct,
+      totalEclCents: Number(ecl!.totalEcl),
+    },
+    collections,
+    decisionSummary: {
+      totalDecisions: (decisions ?? []).length,
+      approvals: approvalCount,
+      avgPdPct,
+      riskBandCounts,
+    },
+    portfolioMix: [
+      { bucket: 'Current', count: portfolioLoans.filter((loan) => loan.daysPastDue === 0).length, outstandingCents: portfolioLoans.filter((loan) => loan.daysPastDue === 0).reduce((sum, loan) => sum + outstandingFor(loan), 0) },
+      { bucket: '1-29 DPD', count: portfolioLoans.filter((loan) => loan.daysPastDue >= 1 && loan.daysPastDue < 30).length, outstandingCents: portfolioLoans.filter((loan) => loan.daysPastDue >= 1 && loan.daysPastDue < 30).reduce((sum, loan) => sum + outstandingFor(loan), 0) },
+      { bucket: '30-59 DPD', count: portfolioLoans.filter((loan) => loan.daysPastDue >= 30 && loan.daysPastDue < 60).length, outstandingCents: portfolioLoans.filter((loan) => loan.daysPastDue >= 30 && loan.daysPastDue < 60).reduce((sum, loan) => sum + outstandingFor(loan), 0) },
+      { bucket: '60-89 DPD', count: portfolioLoans.filter((loan) => loan.daysPastDue >= 60 && loan.daysPastDue < 90).length, outstandingCents: portfolioLoans.filter((loan) => loan.daysPastDue >= 60 && loan.daysPastDue < 90).reduce((sum, loan) => sum + outstandingFor(loan), 0) },
+      { bucket: '90+ DPD', count: portfolioLoans.filter((loan) => loan.daysPastDue >= 90).length, outstandingCents: portfolioLoans.filter((loan) => loan.daysPastDue >= 90).reduce((sum, loan) => sum + outstandingFor(loan), 0) },
+    ],
+    productExposure: Object.entries(productExposure).map(([product, data]) => ({
+      product,
+      count: data.count,
+      outstandingCents: data.outstandingCents,
+    })),
+    filings: [
+      {
+        report: 'NCR Monthly Return',
+        dueDate: _endOfNextMonth(until).toISOString().slice(0, 10),
+        status: _deadlineStatus(_endOfNextMonth(until)),
+      },
+      {
+        report: 'FICA CTR',
+        dueDate: _addBusinessDays(until, 2).toISOString().slice(0, 10),
+        status: _deadlineStatus(_addBusinessDays(until, 2)),
+      },
+      {
+        report: 'FICA SAR',
+        dueDate: _addBusinessDays(until, 3).toISOString().slice(0, 10),
+        status: _deadlineStatus(_addBusinessDays(until, 3)),
+      },
+      {
+        report: 'IFRS 9 ECL',
+        dueDate: _quarterEndAfter(until).toISOString().slice(0, 10),
+        status: _deadlineStatus(_quarterEndAfter(until)),
+      },
+    ],
+  });
+}
 
 async function _ncrMonthly(from: Date, until: Date) {
   const [err, loans] = await to(
     prisma.loan.findMany({
-      where:   { createdAt: { gte: from, lte: until } },
+      where: { createdAt: { gte: from, lte: until } },
       include: { product: true },
     }),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
-  // TODO: The LoanStatus enum has no CANCELLED value — the schema does not model
-  // loan-level cancellation. NCR s.52 "credit agreements cancelled" refers to NCA s.121
-  // consumer cooling-off cancellations. Add a CANCELLED status to LoanStatus (and a
-  // migration) once the business process is defined. Reporting 0 until then.
-  const cancelled = 0;
-
-  // Pattern 5 — reduce for product-level aggregations
-  const byProduct = (loans ?? []).reduce<Record<string, { count: number; totalValue: number; aprSum: number }>>((acc, loan) => {
+  const byProduct = (loans ?? []).reduce<Record<string, { count: number; totalValue: number; aprSum: number }>>((accumulator, loan) => {
     const key = loan.product?.name ?? 'Unknown';
-    if (!acc[key]) acc[key] = { count: 0, totalValue: 0, aprSum: 0 };
-    acc[key].count++;
-    acc[key].totalValue += Number(loan.principal) / 100;
-    acc[key].aprSum     += loan.aprBps / 100;
-    return acc;
+    if (!accumulator[key]) accumulator[key] = { count: 0, totalValue: 0, aprSum: 0 };
+    accumulator[key].count += 1;
+    accumulator[key].totalValue += Number(loan.principal) / 100;
+    accumulator[key].aprSum += loan.aprBps / 100;
+    return accumulator;
   }, {});
 
   const productSummary = Object.entries(byProduct).map(([product, data]) => ({
     product,
-    count:       data.count,
+    count: data.count,
     totalValueRand: data.totalValue,
-    avgAprPct:   data.aprSum / data.count,
+    avgAprPct: data.count ? Math.round((data.aprSum / data.count) * 100) / 100 : 0,
   }));
 
-  const arrears = await to(prisma.loan.count({ where: { daysPastDue: { gt: 0 } } }));
+  const [arrearsErr, arrears] = await to(prisma.loan.count({ where: { daysPastDue: { gt: 0 } } }));
+  if (arrearsErr) return NextResponse.json({ error: arrearsErr.message }, { status: 500 });
+
+  const filingDeadline = _endOfNextMonth(until);
 
   return NextResponse.json({
-    reportType:    'NCR Monthly Return',
-    period:        { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
-    totalOriginated:     (loans ?? []).length,
-    totalCancelled:      cancelled ?? 0,
-    accountsInArrears:   arrears[1] ?? 0,
-    byProduct:           productSummary,
-    generatedAt:         new Date().toISOString(),
-    filingDeadline:      _addDays(until, 30).toISOString().slice(0, 10),  // NCR: due by end of following month
+    reportType: 'NCR Monthly Return',
+    period: _formatPeriod(from, until),
+    totalOriginated: (loans ?? []).length,
+    totalCancelled: 0,
+    accountsInArrears: arrears ?? 0,
+    byProduct: productSummary,
+    generatedAt: new Date().toISOString(),
+    filingDeadline: filingDeadline.toISOString().slice(0, 10),
+    filingStatus: _deadlineStatus(filingDeadline),
   });
 }
 
-// ─── FICA Cash Threshold Report ───────────────────────────────────────────────
-
 async function _ficaCtr(from: Date, until: Date) {
-  // CTR threshold: R24 999 (FICA Determination of Cash Threshold 2010)
-  const CTR_THRESHOLD = 2_499_900; // in cents
-
+  const thresholdCents = 2_499_900;
   const [err, disbursements] = await to(
     prisma.disbursement.findMany({
-      where:   { createdAt: { gte: from, lte: until }, amount: { gte: BigInt(CTR_THRESHOLD) } },
+      where: {
+        createdAt: { gte: from, lte: until },
+        amount: { gte: BigInt(thresholdCents) },
+      },
       include: { loan: { include: { borrower: true } } },
     }),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
-  const reportEntries = (disbursements ?? []).map(d => ({
-    transactionId:   d.id,
-    date:            d.createdAt.toISOString().slice(0, 10),
-    amountRand:      Number(d.amount) / 100,
-    loanId:          d.loanId,
-    borrowerId:      d.loan.borrowerId,
-    rail:            d.rail,
-    filedWithFic:    false, // set to true once filed via FIC e-compliance portal
+  const entries = (disbursements ?? []).map((disbursement) => ({
+    transactionId: disbursement.id,
+    date: disbursement.createdAt.toISOString().slice(0, 10),
+    amountRand: Number(disbursement.amount) / 100,
+    loanId: disbursement.loanId,
+    borrowerId: disbursement.loan.borrowerId,
+    rail: disbursement.rail,
+    filedWithFic: false,
   }));
 
+  const filingDeadline = _addBusinessDays(until, 2);
+
   return NextResponse.json({
-    reportType:      'FICA Cash Threshold Report (CTR)',
-    thresholdRand:   CTR_THRESHOLD / 100,
-    period:          { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
-    totalEntries:    reportEntries.length,
-    entries:         reportEntries,
-    filingNote:      'File at https://ecomply.fic.gov.za within 2 business days of each transaction',
-    generatedAt:     new Date().toISOString(),
+    reportType: 'FICA Cash Threshold Report (CTR)',
+    period: _formatPeriod(from, until),
+    thresholdRand: thresholdCents / 100,
+    totalEntries: entries.length,
+    totalValueRand: entries.reduce((sum, entry) => sum + entry.amountRand, 0),
+    entries,
+    filingDeadline: filingDeadline.toISOString().slice(0, 10),
+    filingStatus: _deadlineStatus(filingDeadline),
+    generatedAt: new Date().toISOString(),
   });
 }
 
-// ─── FICA Suspicious Activity Report log ─────────────────────────────────────
-
 async function _ficaSar(from: Date, until: Date) {
-  // AML alerts are stored in the AmlAlert table (set sarRequired in the AML detector)
   const [err, alerts] = await to(
     prisma.amlAlert.findMany({
-      where:   { createdAt: { gte: from, lte: until }, severity: 'HIGH' },
+      where: { createdAt: { gte: from, lte: until } },
       orderBy: { createdAt: 'desc' },
     }),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
+  const filingDeadline = _addBusinessDays(until, 3);
+
   return NextResponse.json({
-    reportType:   'FICA Suspicious Activity Reports (SAR)',
-    period:       { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
-    totalAlerts:  (alerts ?? []).length,
-    alerts:       (alerts ?? []).map(a => ({
-      alertId:    a.id,
-      borrowerId: a.borrowerId,
-      alertType:  a.type,
-      riskLevel:  a.severity,
-      createdAt:  a.createdAt.toISOString(),
-      filed:      a.filedSar,
+    reportType: 'FICA Suspicious Activity Reports (SAR)',
+    period: _formatPeriod(from, until),
+    totalAlerts: (alerts ?? []).length,
+    highRiskAlerts: (alerts ?? []).filter((alert) => alert.severity === 'HIGH').length,
+    openAlerts: (alerts ?? []).filter((alert) => alert.status === 'OPEN').length,
+    alerts: (alerts ?? []).map((alert) => ({
+      alertId: alert.id,
+      borrowerId: alert.borrowerId,
+      alertType: alert.type,
+      riskLevel: alert.severity,
+      status: alert.status,
+      createdAt: alert.createdAt.toISOString(),
+      filed: alert.filedSar,
     })),
-    filingNote:   'File within 3 business days at https://ecomply.fic.gov.za (FICA s.29)',
-    generatedAt:  new Date().toISOString(),
+    filingDeadline: filingDeadline.toISOString().slice(0, 10),
+    filingStatus: _deadlineStatus(filingDeadline),
+    generatedAt: new Date().toISOString(),
   });
 }
-
-// ─── NCA Affordability Summary ────────────────────────────────────────────────
 
 async function _ncaAffordability(from: Date, until: Date) {
   const [err, decisions] = await to(
     prisma.creditDecision.findMany({
-      where:   { createdAt: { gte: from, lte: until } },
-      include: { application: { include: { product: true } } },
+      where: { createdAt: { gte: from, lte: until } },
+      include: {
+        application: {
+          include: {
+            product: true,
+            borrower: {
+              include: {
+                individual: true,
+                business: true,
+              },
+            },
+          },
+        },
+      },
     }),
   );
   if (err) return NextResponse.json({ error: err.message }, { status: 500 });
 
-  const all      = decisions ?? [];
-  const approved = all.filter(d => d.recommendation === 'APPROVE');
-  const declined = all.filter(d => d.recommendation === 'DECLINE');
+  const all = decisions ?? [];
+  const approved = all.filter((decision) => decision.recommendation === 'APPROVE');
+  const declined = all.filter((decision) => decision.recommendation === 'DECLINE');
+  const avgPdPct = all.length
+    ? Math.round((all.reduce((sum, decision) => sum + decision.pdScore, 0) / all.length) * 1000) / 10
+    : null;
 
-  const avgDti = all.length
-    ? all.reduce((s, d) => s + (d.pdScore ?? 0), 0) / all.length
-    : 0;
+  const declaredIncomeSamples = all
+    .map((decision) => decision.application.borrower.individual?.monthlyIncome ?? decision.application.borrower.business?.monthlyTurnover ?? null)
+    .filter((value): value is bigint => value !== null)
+    .map((value) => Number(value) / 100);
+
+  const declineReasons = declined
+    .flatMap((decision) => decision.reasonCodes)
+    .reduce<Record<string, number>>((accumulator, reason) => {
+      accumulator[reason] = (accumulator[reason] ?? 0) + 1;
+      return accumulator;
+    }, {});
+
+  const byProduct = all.reduce<Record<string, { count: number; approved: number; pdSum: number }>>((accumulator, decision) => {
+    const key = decision.application.product.name;
+    if (!accumulator[key]) {
+      accumulator[key] = { count: 0, approved: 0, pdSum: 0 };
+    }
+    accumulator[key].count += 1;
+    accumulator[key].approved += decision.recommendation === 'APPROVE' ? 1 : 0;
+    accumulator[key].pdSum += decision.pdScore;
+    return accumulator;
+  }, {});
 
   return NextResponse.json({
-    reportType:       'NCA Affordability Assessment Summary',
-    period:           { from: from.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10) },
-    totalDecisions:   all.length,
-    approved:         approved.length,
-    declined:         declined.length,
-    approvalRate:     all.length ? (approved.length / all.length * 100).toFixed(1) + '%' : '0%',
-    avgDtiScore:      avgDti.toFixed(4),
-    note:             'NCA s.81: No reckless credit. All declines must cite a policy rule.',
-    generatedAt:      new Date().toISOString(),
+    reportType: 'NCA Affordability Assessment Summary',
+    period: _formatPeriod(from, until),
+    totalDecisions: all.length,
+    approved: approved.length,
+    declined: declined.length,
+    approvalRatePct: _safePct(approved.length, all.length),
+    avgPdPct,
+    avgDeclaredIncomeRand: declaredIncomeSamples.length
+      ? Math.round((declaredIncomeSamples.reduce((sum, value) => sum + value, 0) / declaredIncomeSamples.length) * 100) / 100
+      : null,
+    declineReasons: Object.entries(declineReasons)
+      .sort((left, right) => right[1] - left[1])
+      .map(([reason, count]) => ({ reason, count })),
+    byProduct: Object.entries(byProduct).map(([product, data]) => ({
+      product,
+      count: data.count,
+      approvalRatePct: _safePct(data.approved, data.count),
+      avgPdPct: data.count ? Math.round((data.pdSum / data.count) * 1000) / 10 : null,
+    })),
+    generatedAt: new Date().toISOString(),
+    note: 'Affordability remains tied to declared income and underwriting PD until live bank-income normalization is wired across all products.',
   });
 }
 
-// ─── IFRS 9 ECL Snapshot ─────────────────────────────────────────────────────
+async function _ifrs9Ecl(from: Date, until: Date) {
+  const [eclErr, ecl] = await to(computeEcl());
+  const [loanErr, loans] = await to(
+    prisma.loan.findMany({
+      where: {
+        createdAt: { lte: until },
+        status: { in: ['ACTIVE', 'DEFAULTED', 'RESTRUCTURED', 'PENDING_DISBURSEMENT'] },
+      },
+      select: {
+        daysPastDue: true,
+      },
+    }),
+  );
 
-async function _ifrs9Ecl() {
-  const [err, ecl] = await to(computeEcl());
-  if (err) return NextResponse.json({ error: err.message }, { status: 500 });
+  if (eclErr || loanErr) {
+    return NextResponse.json({ error: eclErr?.message ?? loanErr?.message ?? 'Failed to generate IFRS 9 snapshot' }, { status: 500 });
+  }
+
+  const stageCounts = {
+    stage1: (loans ?? []).filter((loan) => loan.daysPastDue === 0).length,
+    stage2: (loans ?? []).filter((loan) => loan.daysPastDue > 0 && loan.daysPastDue < 90).length,
+    stage3: (loans ?? []).filter((loan) => loan.daysPastDue >= 90).length,
+  };
 
   return NextResponse.json({
-    reportType:  'IFRS 9 Expected Credit Loss (ECL) Snapshot',
+    reportType: 'IFRS 9 Expected Credit Loss (ECL) Snapshot',
+    period: _formatPeriod(from, until),
     generatedAt: new Date().toISOString(),
     ecl: {
-      totalEcl:    ecl!.totalEcl.toString(),
-      loanCount:   ecl!.loanCount,
-      stage1Ecl:   ecl!.stage1Ecl.toString(),
-      stage2Ecl:   ecl!.stage2Ecl.toString(),
-      stage3Ecl:   ecl!.stage3Ecl.toString(),
+      totalEcl: Number(ecl!.totalEcl),
+      loanCount: ecl!.loanCount,
+      stage1Ecl: Number(ecl!.stage1Ecl),
+      stage2Ecl: Number(ecl!.stage2Ecl),
+      stage3Ecl: Number(ecl!.stage3Ecl),
     },
-    note: 'IFRS 9 ECL = PD × LGD × EAD. LGD fixed at 50% — update with historical recovery data.',
+    stageCounts,
+    note: 'IFRS 9 ECL = PD × LGD × EAD. LGD remains fixed at 50% until recoveries are calibrated from production data.',
   });
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function _defaultFrom(): string {
-  const d = new Date();
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
+  const date = new Date();
+  date.setDate(1);
+  return date.toISOString().slice(0, 10);
 }
 
-function _addDays(d: Date, days: number): Date {
-  const r = new Date(d);
-  r.setDate(r.getDate() + days);
-  return r;
+function _formatPeriod(from: Date, until: Date) {
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: until.toISOString().slice(0, 10),
+  };
+}
+
+function _safePct(numerator: number, denominator: number): number | null {
+  return denominator > 0 ? Math.round((numerator / denominator) * 10_000) / 100 : null;
+}
+
+function _addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let remaining = days;
+  while (remaining > 0) {
+    result.setDate(result.getDate() + 1);
+    const weekday = result.getDay();
+    if (weekday !== 0 && weekday !== 6) {
+      remaining -= 1;
+    }
+  }
+  return result;
+}
+
+function _endOfNextMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 2, 0);
+}
+
+function _quarterEndAfter(date: Date): Date {
+  const quarterEndMonth = Math.floor(date.getMonth() / 3) * 3 + 3;
+  return new Date(date.getFullYear(), quarterEndMonth, 0);
+}
+
+function _deadlineStatus(deadline: Date): 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE' {
+  const today = new Date();
+  const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return 'OVERDUE';
+  if (diffDays <= 7) return 'DUE_SOON';
+  return 'ON_TRACK';
 }

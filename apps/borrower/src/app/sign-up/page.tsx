@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { setSession } from '@/lib/session';
@@ -23,6 +23,12 @@ export default function SignUp() {
   const [step, setStep] = useState(1);
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [returnPath, setReturnPath] = useState('/dashboard');
+
+  useEffect(() => {
+    const nextPath = new URLSearchParams(window.location.search).get('next');
+    setReturnPath(nextPath?.startsWith('/') ? nextPath : '/dashboard');
+  }, []);
 
   const [form, setForm] = useState({
     email: '', phone: '', fullName: '', idNumber: '',
@@ -34,7 +40,30 @@ export default function SignUp() {
   }
 
   function fillTestData() {
+    setError('');
     setForm({ ...TEST_DATA, email: `demo.${Date.now()}@capstack-test.com` });
+    setStep(2);
+  }
+
+  function handleContinue(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+
+    if (!form.fullName.trim()) {
+      setError('Enter your full name to continue.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+
+    if (!/^\+?[0-9()\-\s]{10,}$/.test(form.phone)) {
+      setError('Enter a valid mobile number, for example +27 82 000 0000.');
+      return;
+    }
+
     setStep(2);
   }
 
@@ -44,9 +73,21 @@ export default function SignUp() {
     setLoading(true);
 
     try {
+      if (!/^\d{13}$/.test(form.idNumber)) {
+        setError('South African ID number must be exactly 13 digits.');
+        setLoading(false);
+        return;
+      }
+
       // Validate date format before sending
       if (!/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) {
         setError('Date of birth must be in YYYY-MM-DD format (e.g. 1990-05-15)');
+        setLoading(false);
+        return;
+      }
+
+      if (form.monthlyIncome && Number(form.monthlyIncome) <= 0) {
+        setError('Monthly income must be greater than zero.');
         setLoading(false);
         return;
       }
@@ -81,7 +122,7 @@ export default function SignUp() {
       if (!authRes.ok) { setError(authData.error ?? 'Sign-in failed after registration'); return; }
 
       setSession(authData);
-      router.push('/dashboard');
+      router.push(returnPath);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       // Network errors often say "Failed to fetch" — give a clearer message
@@ -128,6 +169,9 @@ export default function SignUp() {
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
             Create your account to apply for a loan.
           </p>
+          <p className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>
+            We&apos;ll create your borrower profile first, then take you into your application.
+          </p>
         </div>
 
         {/* Test data banner */}
@@ -151,9 +195,18 @@ export default function SignUp() {
           ))}
         </div>
 
-        <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2); } : handleSubmit}
+        <form onSubmit={step === 1 ? handleContinue : handleSubmit}
           className="flex flex-col gap-4"
         >
+          {error && (
+            <div
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}
+            >
+              {error}
+            </div>
+          )}
+
           {step === 1 && (
             <>
               {field('Full name', 'fullName', 'text', 'As on your ID')}
@@ -164,8 +217,11 @@ export default function SignUp() {
                 className="w-full text-sm font-semibold py-2.5 rounded-lg mt-2"
                 style={{ background: 'var(--color-primary)', color: '#fff' }}
               >
-                Continue
+                Continue to application
               </button>
+              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                Already registered? Use Sign in below to continue an existing application.
+              </p>
             </>
           )}
 
@@ -204,12 +260,12 @@ export default function SignUp() {
               </div>
               {field('Monthly gross income (R)', 'monthlyIncome', 'number', '15000')}
 
-              {error && (
+              {loading && (
                 <div
                   className="text-xs px-3 py-2 rounded-lg"
-                  style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}
+                  style={{ background: 'var(--color-surface-2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}
                 >
-                  {error}
+                  Creating your borrower account and preparing your secure workspace…
                 </div>
               )}
 
@@ -237,7 +293,7 @@ export default function SignUp() {
 
         <p className="text-xs mt-6 text-center" style={{ color: 'var(--color-muted)' }}>
           Already have an account?{' '}
-          <Link href="/sign-in" style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>Sign in</Link>
+          <Link href={returnPath === '/dashboard' ? '/sign-in' : `/sign-in?next=${encodeURIComponent(returnPath)}`} style={{ color: 'var(--color-secondary)', fontWeight: 600 }}>Sign in</Link>
         </p>
       </div>
     </div>

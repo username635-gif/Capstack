@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { ThemeToggle } from './_components/ThemeProvider';
 
+const APPLY_START_HREF = '/sign-up?next=/apply';
+
 export default function BorrowerHome() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--foreground)" }}>
@@ -13,7 +15,7 @@ export default function BorrowerHome() {
             <ThemeToggle />
             <Link href="/sign-in" className="text-sm" style={{ color: "var(--color-muted)" }}>Sign in</Link>
             <Link
-              href="/apply"
+              href={APPLY_START_HREF}
               className="text-sm font-semibold px-4 py-2 rounded-lg"
               style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}
             >
@@ -35,12 +37,12 @@ export default function BorrowerHome() {
           Apply for a personal or business loan in minutes. No hidden fees, no surprises — just clear terms and fast decisions.
         </p>
         <div className="flex gap-3 mt-2">
-          <a href="/apply" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-primary)", color: "#fff" }}>
+          <Link href={APPLY_START_HREF} className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-primary)", color: "#fff" }}>
             Apply for a loan
-          </a>
-          <a href="/dashboard" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--foreground)" }}>
+          </Link>
+          <Link href="/sign-in?next=/dashboard" className="px-6 py-3 rounded-lg font-semibold text-sm" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--foreground)" }}>
             Check my application
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -78,16 +80,26 @@ export default function BorrowerHome() {
         </div>
       </section>
 
-      {/* Active loan card (logged-in state preview) */}
+      {/* Demo loan card */}
       <section className="max-w-6xl mx-auto px-6 pb-20 w-full">
-        <h2 className="text-2xl font-bold mb-6">My loan</h2>
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Demo loan preview</h2>
+            <p className="text-sm mt-2" style={{ color: 'var(--color-muted)' }}>
+              Example borrower data shown to preview the dashboard experience before sign-in.
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-3 py-1 rounded-full w-fit" style={{ background: 'var(--color-surface-2)', color: 'var(--color-secondary)', border: '1px solid var(--color-border)' }}>
+            Demo example
+          </span>
+        </div>
         <div className="rounded-xl p-6" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm mb-1" style={{ color: "var(--color-muted)" }}>Personal loan · REF-2024-00812</div>
+              <div className="text-sm mb-1" style={{ color: "var(--color-muted)" }}>Example personal loan · REF-DEMO-00812</div>
               <div className="text-3xl font-black">R 15 000</div>
             </div>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "var(--badge-active-bg)", color: "var(--badge-active-fg)" }}>Active</span>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "var(--badge-active-bg)", color: "var(--badge-active-fg)" }}>Demo active loan</span>
           </div>
           <div className="mb-2 flex justify-between text-sm" style={{ color: "var(--color-muted)" }}>
             <span>Repaid: R 6 000</span>
@@ -115,7 +127,7 @@ export default function BorrowerHome() {
       <footer style={{ borderTop: "1px solid var(--color-border)" }}>
         <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center text-xs" style={{ color: "var(--color-muted)" }}>
           <span>© 2026 Capstack Financial Services</span>
-          <span>NCR Registered · FSP 12345</span>
+          <span>NCR Registered · FSP registration pending</span>
         </div>
       </footer>
 
