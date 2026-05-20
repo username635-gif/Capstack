@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { getSession } from '@/lib/session';
 import { API_BASE_URL as API, buildOpsApiHeaders } from '@/lib/api-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 
 type WorkflowStatus = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
 type SortKey = 'amountRequested' | 'termDaysRequested' | 'submittedAt';
@@ -140,93 +142,45 @@ function getBorrowerName(application: ApiApplication) {
 
 export default function ApplicationsPage() {
   const router = useRouter();
-  const [applications, setApplications] = useState<ApiApplication[]>([]);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<WorkflowStatus>('ALL');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('submittedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState<Record<WorkflowStatus, number>>(EMPTY_STATUS_COUNTS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [acting, setActing] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null);
   const [rowAction, setRowAction] = useState<{ id: string; action: 'assign' | 'flag' } | null>(null);
   const deferredSearch = useDeferredValue(search.trim());
 
-  useEffect(() => {
-    const controller = new AbortController();
+  async function fetchApplications({ queryKey }: { queryKey: any }) {
+    const [_key, { filter, search, page, sortKey, sortDirection }] = queryKey;
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      offset: String((page - 1) * PAGE_SIZE),
+      sortBy: sortKey,
+      sortDirection,
+    });
 
-    async function loadApplications() {
-      setLoading(true);
-      setError(null);
+    if (filter !== 'ALL') params.set('status', filter);
+    if (search) params.set('q', search);
 
-      const params = new URLSearchParams({
-        limit: String(PAGE_SIZE),
-        offset: String((page - 1) * PAGE_SIZE),
-        sortBy: sortKey,
-        sortDirection,
-      });
+    const headers = await buildOpsApiHeaders();
+    const res = await fetch(`${API}/api/v1/applications?${params.toString()}`, { headers, cache: 'no-store' });
+    const payload = await res.json().catch(() => null) as (ApplicationsResponse & { error?: string }) | null;
+    if (!res.ok) throw new Error(payload?.error ?? 'Unable to load application queue.');
+    return payload as ApplicationsResponse;
+  }
 
-      if (filter !== 'ALL') {
-        params.set('status', filter);
-      }
+  const { data, isLoading, error } = useQuery(
+    ['applications', { filter, search: deferredSearch, page, sortKey, sortDirection }],
+    fetchApplications,
+    { keepPreviousData: true }
+  );
 
-      if (deferredSearch) {
-        params.set('q', deferredSearch);
-      }
-
-      try {
-        const headers = await buildOpsApiHeaders();
-        const response = await fetch(`${API}/api/v1/applications?${params.toString()}`, {
-          headers,
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        const payload = await response.json().catch(() => null) as (ApplicationsResponse & { error?: string }) | null;
-
-        if (!response.ok) {
-          throw new Error(payload?.error ?? 'Unable to load application queue.');
-        }
-
-        if (controller.signal.aborted) return;
-
-        const nextTotal = payload?.total ?? 0;
-        const nextCounts = { ...EMPTY_STATUS_COUNTS, ...(payload?.statusCounts ?? {}) };
-        const lastPage = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE));
-
-        setTotal(nextTotal);
-        setCounts(nextCounts);
-        setActionError(null);
-
-        if (page > lastPage) {
-          setPage(lastPage);
-          return;
-        }
-
-        setApplications(payload?.data ?? []);
-      } catch (loadError) {
-        if (controller.signal.aborted) return;
-
-        setApplications([]);
-        setTotal(0);
-        setCounts(EMPTY_STATUS_COUNTS);
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load application queue.');
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadApplications();
-
-    return () => {
-      controller.abort();
-    };
-  }, [deferredSearch, filter, page, refreshKey, sortDirection, sortKey]);
+  const applications = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const counts = { ...EMPTY_STATUS_COUNTS, ...(data?.statusCounts ?? {}) };
 
   function changeFilter(nextFilter: WorkflowStatus) {
     setFilter(nextFilter);
@@ -281,7 +235,7 @@ export default function ApplicationsPage() {
         throw new Error(payload?.error ?? `Unable to ${action} application.`);
       }
 
-      setRefreshKey((current) => current + 1);
+      await queryClient.invalidateQueries(['applications']);
     } catch (submitError) {
       setActionError(submitError instanceof Error ? submitError.message : `Unable to ${action} application.`);
     } finally {
@@ -313,7 +267,7 @@ export default function ApplicationsPage() {
         throw new Error(result?.error ?? 'Unable to update application workflow.');
       }
 
-      setRefreshKey((current) => current + 1);
+      await queryClient.invalidateQueries(['applications']);
     } catch (submitError) {
       setActionError(submitError instanceof Error ? submitError.message : 'Unable to update application workflow.');
     } finally {
@@ -330,6 +284,132 @@ export default function ApplicationsPage() {
   const currentPage = Math.min(page, totalPages);
   const fromRecord = total === 0 ? 0 : ((currentPage - 1) * PAGE_SIZE) + 1;
   const toRecord = total === 0 ? 0 : Math.min(((currentPage - 1) * PAGE_SIZE) + applications.length, total);
+
+  // TanStack columns
+  const columnHelper = createColumnHelper<ApiApplication>();
+
+  const columns = useMemo(() => [
+    columnHelper.display({
+      id: 'borrower',
+      header: 'Borrower',
+      cell: (info) => {
+        const app = info.row.original;
+        return (
+          <div>
+            <div className="font-medium">{getBorrowerName(app)}</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{app.borrower.email}</div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>{app.externalRef ?? `APP-${app.id.slice(-8).toUpperCase()}`}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'assignment',
+      header: 'Assignment',
+      cell: (info) => {
+        const app = info.row.original;
+        return (
+          <div>
+            <div className="font-medium">{app.assignee?.assignee ?? 'Unassigned'}</div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>{app.assignee?.assignedAt ? `Assigned ${new Date(app.assignee.assignedAt).toLocaleDateString('en-ZA')}` : 'Queue owner not set'}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'offer',
+      header: 'Offer',
+      cell: (info) => {
+        const app = info.row.original;
+        return (
+          <div>
+            <div className="font-semibold">{app.product?.name ?? '—'}</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{formatCurrency(app.amountRequested)} · {formatTerm(app.termDaysRequested)}</div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>AI offer: {formatCurrency(app.underwriting.recommendedOffer.amountCents)} · {formatTerm(app.underwriting.recommendedOffer.termDays)} · {formatApr(app.underwriting.recommendedOffer.aprBps)}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'ai',
+      header: 'AI / NCA',
+      cell: (info) => {
+        const app = info.row.original;
+        return (
+          <div>
+            <div className="font-semibold">{app.underwriting.recommendation ?? 'Decision pending'}{app.underwriting.riskScore != null && ` · ${app.underwriting.riskScore}/1000`}</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>Risk band {app.underwriting.riskBand ?? '—'}{app.underwriting.confidencePct != null && ` · ${app.underwriting.confidencePct}% confidence`}</div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>NCA: {app.affordability.ncaStatus} · DTI {app.affordability.dtiPct != null ? `${app.affordability.dtiPct.toFixed(1)}%` : '—'}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'compliance',
+      header: 'Compliance',
+      cell: (info) => {
+        const c = info.row.original.compliance;
+        return (
+          <div>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge label={`KYC ${formatStatus(c.kycStatus)}`} background="var(--color-surface-2)" color="var(--foreground)" />
+              <Badge label={`AML ${c.amlRisk}`} background={c.amlRisk === 'HIGH' ? 'var(--badge-declined-bg)' : c.amlRisk === 'MEDIUM' ? 'var(--badge-awaiting-bg)' : 'var(--badge-approved-bg)'} color={c.amlRisk === 'HIGH' ? 'var(--badge-declined-fg)' : c.amlRisk === 'MEDIUM' ? 'var(--badge-awaiting-fg)' : 'var(--badge-approved-fg)'} />
+              <Badge label={`Bureau ${formatStatus(c.bureauStatus)}`} background={c.bureauStatus === 'FAILED' ? 'var(--badge-declined-bg)' : c.bureauStatus === 'PULLED' ? 'var(--badge-approved-bg)' : 'var(--color-surface-2)'} color={c.bureauStatus === 'FAILED' ? 'var(--badge-declined-fg)' : c.bureauStatus === 'PULLED' ? 'var(--badge-approved-fg)' : 'var(--foreground)'} />
+            </div>
+            <div className="text-[11px] mt-2" style={{ color: 'var(--color-muted)' }}>Bureau score: {c.bureauScore ?? '—'}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor('submittedAt', {
+      id: 'queue',
+      header: () => (
+        <button type="button" onClick={() => toggleSort('submittedAt')} className="inline-flex items-center gap-1 font-medium">
+          <span>Queue</span>
+          <span>{sortLabel('submittedAt')}</span>
+        </button>
+      ),
+      cell: (info) => {
+        const app = info.row.original;
+        const statusStyle = STATUS_STYLES[app.workflowStatus];
+        const slaStyle = SLA_STYLES[app.slaStatus];
+        const priorityStyle = PRIORITY_STYLES[app.reviewPriority];
+
+        return (
+          <div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: statusStyle.bg, color: statusStyle.fg }}>{formatStatus(app.workflowStatus)}</span>
+              <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: slaStyle.bg, color: slaStyle.fg }}>{app.slaStatus === 'WITHIN_SLA' ? 'Within SLA' : app.slaStatus === 'BREACH_SOON' ? 'SLA watch' : 'SLA breached'}</span>
+              <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: priorityStyle.bg, color: priorityStyle.fg }}>{app.reviewPriority} priority</span>
+            </div>
+            <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>Submitted {new Date(app.submittedAt).toLocaleDateString('en-ZA')}</div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: 'Actions',
+      cell: (info) => {
+        const app = info.row.original;
+        const rowBusy = acting?.id === app.id;
+        const rowWorkflowBusy = rowAction?.id === app.id;
+
+        return (
+          <div className="flex flex-col items-start gap-2">
+            <button onClick={() => router.push(`/applications/${app.id}`)} className="text-xs font-semibold" style={{ color: 'var(--color-secondary)' }}>Open review →</button>
+            <button type="button" onClick={() => submitWorkflowEvent(app, 'ASSIGNED', { assignee: getSession()?.name ?? 'Ops user', queue: 'underwriting' })} disabled={rowWorkflowBusy} className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50" style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}>{rowWorkflowBusy && rowAction?.action === 'assign' ? 'Assigning…' : 'Assign to me'}</button>
+            <button type="button" onClick={() => submitWorkflowEvent(app, 'FLAGGED', { reason: 'Flagged from the queue for manual escalation.', severity: app.reviewPriority === 'HIGH' ? 'HIGH' : 'MEDIUM' })} disabled={rowWorkflowBusy} className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50" style={{ background: 'var(--badge-awaiting-bg)', color: 'var(--badge-awaiting-fg)' }}>{rowWorkflowBusy && rowAction?.action === 'flag' ? 'Flagging…' : app.flag ? 'Update flag' : 'Flag'}</button>
+            {app.canApprove && <button type="button" onClick={() => submitAction(app, 'approve')} disabled={rowBusy} className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50" style={{ background: 'var(--badge-approved-bg)', color: 'var(--badge-approved-fg)' }}>{rowBusy && acting?.action === 'approve' ? 'Approving…' : 'Approve'}</button>}
+            {app.canReject && <button type="button" onClick={() => submitAction(app, 'reject')} disabled={rowBusy} className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}>{rowBusy && acting?.action === 'reject' ? 'Rejecting…' : 'Reject'}</button>}
+            {app.workflowStatus === 'PENDING_DISBURSEMENT' && <button type="button" onClick={() => router.push(`/applications/${app.id}`)} className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'var(--badge-awaiting-bg)', color: 'var(--badge-awaiting-fg)' }}>Prep payout</button>}
+          </div>
+        );
+      },
+    }),
+  ] as const, [acting, rowAction, router]);
+
+  const table = useReactTable({ data: applications, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
     <OpsLayout
@@ -352,17 +432,20 @@ export default function ApplicationsPage() {
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="w-full lg:max-w-md">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--color-muted)' }}>
+            <label htmlFor="search-applications" className="text-xs font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--color-muted)' }}>
               Search applications
             </label>
             <input
+              id="search-applications"
               type="search"
               value={search}
               onChange={(event) => changeSearch(event.target.value)}
               placeholder="Search borrower, email, reference, or loan number"
-              className="w-full px-4 py-3 rounded-lg text-sm"
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+              className="w-full px-4 py-3 rounded-lg text-sm focus:outline-2 focus:outline-offset-2"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outlineColor: 'var(--color-primary)' }}
+              aria-describedby="search-hint"
             />
+            <div id="search-hint" className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>Type borrower name, email, or reference to filter</div>
           </div>
 
           <div className="rounded-xl px-4 py-3 text-sm min-w-[260px]" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
@@ -379,11 +462,13 @@ export default function ApplicationsPage() {
           {ALL_STATUSES.map((status) => (
             <button
               key={status}
+              type="button"
               onClick={() => changeFilter(status)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors inline-flex items-center gap-2"
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors inline-flex items-center gap-2 focus:outline-2 focus:outline-offset-2"
               style={{
                 background: filter === status ? 'var(--color-primary)' : 'var(--color-surface-2)',
                 color: filter === status ? 'var(--color-primary-fg)' : 'var(--color-muted)',
+                outlineColor: 'var(--color-primary)',
               }}
             >
               <span>{formatStatus(status)}</span>
@@ -409,13 +494,13 @@ export default function ApplicationsPage() {
         </div>
 
         {error && (
-          <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}>
+          <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }} role="alert" aria-live="polite">
             {error}
           </div>
         )}
 
         {actionError && (
-          <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}>
+          <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }} role="alert" aria-live="assertive">
             {actionError}
           </div>
         )}
@@ -424,224 +509,40 @@ export default function ApplicationsPage() {
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Borrower</th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Assignment</th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Offer</th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>AI / NCA</th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Compliance</th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>
-                <button type="button" onClick={() => toggleSort('submittedAt')} className="inline-flex items-center gap-1 font-medium">
-                  <span>Queue</span>
-                  <span>{sortLabel('submittedAt')}</span>
-                </button>
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Actions</th>
-            </tr>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+                {hg.headers.map((header) => (
+                  <th key={header.id} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
           </thead>
+
           <tbody>
-            {loading && applications.length === 0 ? (
+            {isLoading && applications.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--color-muted)' }}>
                   Loading enterprise application queue…
                 </td>
               </tr>
-            ) : applications.length === 0 ? (
+            ) : table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--color-muted)' }}>
                   No applications match the current filter and search.
                 </td>
               </tr>
             ) : (
-              applications.map((application, index) => {
-                const rowBusy = acting?.id === application.id;
-                const rowWorkflowBusy = rowAction?.id === application.id;
-                const statusStyle = STATUS_STYLES[application.workflowStatus];
-                const slaStyle = SLA_STYLES[application.slaStatus];
-                const priorityStyle = PRIORITY_STYLES[application.reviewPriority];
-
-                return (
-                  <tr
-                    key={application.id}
-                    style={{ borderBottom: index < applications.length - 1 ? '1px solid var(--color-border)' : 'none' }}
-                    className="hover:bg-[var(--color-surface-2)] transition-colors align-top"
-                  >
-                    <td className="px-4 py-4">
-                      <div className="font-medium">{getBorrowerName(application)}</div>
-                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{application.borrower.email}</div>
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        {application.externalRef ?? `APP-${application.id.slice(-8).toUpperCase()}`}
-                      </div>
+              table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="hover:bg-[var(--color-surface-2)] transition-colors align-top" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-4 py-4">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
-
-                    <td className="px-4 py-4">
-                      <div className="font-medium">{application.assignee?.assignee ?? 'Unassigned'}</div>
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        {application.assignee?.assignedAt
-                          ? `Assigned ${new Date(application.assignee.assignedAt).toLocaleDateString('en-ZA')}`
-                          : 'Queue owner not set'}
-                      </div>
-                      {application.flag && (
-                        <div className="text-[11px] mt-2" style={{ color: 'var(--badge-declined-fg)' }}>
-                          Flagged by {application.flag.actor}
-                          {application.flag.reason ? ` · ${application.flag.reason}` : ''}
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="font-semibold">{application.product?.name ?? '—'}</div>
-                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-                        {formatCurrency(application.amountRequested)} · {formatTerm(application.termDaysRequested)}
-                      </div>
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        AI offer: {formatCurrency(application.underwriting.recommendedOffer.amountCents)} · {formatTerm(application.underwriting.recommendedOffer.termDays)} · {formatApr(application.underwriting.recommendedOffer.aprBps)}
-                      </div>
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        Instalment est: {formatCurrency(application.underwriting.recommendedOffer.estimatedInstallmentCents)}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="font-semibold">
-                        {application.underwriting.recommendation ?? 'Decision pending'}
-                        {application.underwriting.riskScore != null && ` · ${application.underwriting.riskScore}/1000`}
-                      </div>
-                      <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
-                        Risk band {application.underwriting.riskBand ?? '—'}
-                        {application.underwriting.confidencePct != null && ` · ${application.underwriting.confidencePct}% confidence`}
-                      </div>
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        NCA: {application.affordability.ncaStatus} · DTI {application.affordability.dtiPct != null ? `${application.affordability.dtiPct.toFixed(1)}%` : '—'}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        <Badge label={`KYC ${formatStatus(application.compliance.kycStatus)}`} background="var(--color-surface-2)" color="var(--foreground)" />
-                        <Badge
-                          label={`AML ${application.compliance.amlRisk}`}
-                          background={application.compliance.amlRisk === 'HIGH' ? 'var(--badge-declined-bg)' : application.compliance.amlRisk === 'MEDIUM' ? 'var(--badge-awaiting-bg)' : 'var(--badge-approved-bg)'}
-                          color={application.compliance.amlRisk === 'HIGH' ? 'var(--badge-declined-fg)' : application.compliance.amlRisk === 'MEDIUM' ? 'var(--badge-awaiting-fg)' : 'var(--badge-approved-fg)'}
-                        />
-                        <Badge
-                          label={`Bureau ${formatStatus(application.compliance.bureauStatus)}`}
-                          background={application.compliance.bureauStatus === 'FAILED' ? 'var(--badge-declined-bg)' : application.compliance.bureauStatus === 'PULLED' ? 'var(--badge-approved-bg)' : 'var(--color-surface-2)'}
-                          color={application.compliance.bureauStatus === 'FAILED' ? 'var(--badge-declined-fg)' : application.compliance.bureauStatus === 'PULLED' ? 'var(--badge-approved-fg)' : 'var(--foreground)'}
-                        />
-                      </div>
-                      <div className="text-[11px] mt-2" style={{ color: 'var(--color-muted)' }}>
-                        Bureau score: {application.compliance.bureauScore ?? '—'} · Internal notes: {application.noteCount}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: statusStyle.bg, color: statusStyle.fg }}>
-                          {formatStatus(application.workflowStatus)}
-                        </span>
-                        <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: slaStyle.bg, color: slaStyle.fg }}>
-                          {application.slaStatus === 'WITHIN_SLA' ? 'Within SLA' : application.slaStatus === 'BREACH_SOON' ? 'SLA watch' : 'SLA breached'}
-                        </span>
-                        <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: priorityStyle.bg, color: priorityStyle.fg }}>
-                          {application.reviewPriority} priority
-                        </span>
-                      </div>
-                      {application.status !== application.workflowStatus && (
-                        <div className="text-[11px]" style={{ color: 'var(--color-muted)' }}>
-                          Stage: {formatStatus(application.status)}
-                        </div>
-                      )}
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        Age: {formatAge(application.ageHours)} · Tier: {formatStatus(application.approvalTier)}
-                      </div>
-                      {application.workflowStatus === 'SUBMITTED' && (
-                        <div className="text-[11px] mt-1" style={{ color: application.slaStatus === 'BREACHED' ? 'var(--badge-declined-fg)' : 'var(--color-muted)' }}>
-                          {application.ageHours >= 24
-                            ? `${Math.floor(application.ageHours / 24)} day${Math.floor(application.ageHours / 24) === 1 ? '' : 's'} unreviewed`
-                            : `${application.ageHours} hours unreviewed`}
-                        </div>
-                      )}
-                      <div className="text-[11px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                        Submitted {new Date(application.submittedAt).toLocaleDateString('en-ZA')}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col items-start gap-2">
-                        <button
-                          onClick={() => router.push(`/applications/${application.id}`)}
-                          className="text-xs font-semibold"
-                          style={{ color: 'var(--color-secondary)' }}
-                        >
-                          Open review →
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => submitWorkflowEvent(application, 'ASSIGNED', {
-                            assignee: getSession()?.name ?? 'Ops user',
-                            queue: 'underwriting',
-                          })}
-                          disabled={rowWorkflowBusy}
-                          className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50"
-                          style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)', border: '1px solid var(--color-border)' }}
-                        >
-                          {rowWorkflowBusy && rowAction?.action === 'assign' ? 'Assigning…' : 'Assign to me'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => submitWorkflowEvent(application, 'FLAGGED', {
-                            reason: 'Flagged from the queue for manual escalation.',
-                            severity: application.reviewPriority === 'HIGH' ? 'HIGH' : 'MEDIUM',
-                          })}
-                          disabled={rowWorkflowBusy}
-                          className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50"
-                          style={{ background: 'var(--badge-awaiting-bg)', color: 'var(--badge-awaiting-fg)' }}
-                        >
-                          {rowWorkflowBusy && rowAction?.action === 'flag' ? 'Flagging…' : application.flag ? 'Update flag' : 'Flag'}
-                        </button>
-
-                        {application.canApprove && (
-                          <button
-                            type="button"
-                            onClick={() => submitAction(application, 'approve')}
-                            disabled={rowBusy}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50"
-                            style={{ background: 'var(--badge-approved-bg)', color: 'var(--badge-approved-fg)' }}
-                          >
-                            {rowBusy && acting?.action === 'approve' ? 'Approving…' : 'Approve'}
-                          </button>
-                        )}
-
-                        {application.canReject && (
-                          <button
-                            type="button"
-                            onClick={() => submitAction(application, 'reject')}
-                            disabled={rowBusy}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full disabled:opacity-50"
-                            style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }}
-                          >
-                            {rowBusy && acting?.action === 'reject' ? 'Rejecting…' : 'Reject'}
-                          </button>
-                        )}
-
-                        {application.workflowStatus === 'PENDING_DISBURSEMENT' && (
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/applications/${application.id}`)}
-                            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                            style={{ background: 'var(--badge-awaiting-bg)', color: 'var(--badge-awaiting-fg)' }}
-                          >
-                            Prep payout
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -656,7 +557,7 @@ export default function ApplicationsPage() {
           <button
             type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
-            disabled={currentPage === 1 || loading}
+            disabled={currentPage === 1 || isLoading}
             className="px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
           >
@@ -668,7 +569,7 @@ export default function ApplicationsPage() {
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={currentPage === totalPages || loading}
+            disabled={currentPage === totalPages || isLoading}
             className="px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
           >

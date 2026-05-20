@@ -15,14 +15,14 @@ export default function Topbar({ title = 'Dashboard', subtitle = '' }: { title?:
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.05)] bg-white" style={{ marginLeft: 208 }}>
       <div>
-        <div className="text-[15px] font-medium">{title}</div>
+        <h1 className="text-[15px] font-medium">{title}</h1>
         <div className="text-[12px] text-[#888780]">{formattedDate} · <LiveIndicator /></div>
       </div>
 
       <div className="flex items-center gap-3">
-        <button className="px-3 py-1.5 border rounded text-[13px]">Export</button>
-        <button className="px-3 py-1.5 bg-[#E6F1FB] text-[#185FA5] rounded text-[13px]">Review applications (12)</button>
-        <button className="px-3 py-1.5 bg-white border rounded text-[13px]">Open collections (5)</button>
+        <button type="button" className="px-3 py-1.5 border rounded text-[13px] focus:outline-2 focus:outline-offset-2 focus:outline-[#185FA5]" aria-label="Export current view">Export</button>
+        <button type="button" className="px-3 py-1.5 bg-[#E6F1FB] text-[#185FA5] rounded text-[13px] focus:outline-2 focus:outline-offset-2 focus:outline-[#185FA5]">Review applications (12)</button>
+        <button type="button" className="px-3 py-1.5 bg-white border rounded text-[13px] focus:outline-2 focus:outline-offset-2 focus:outline-[#185FA5]">Open collections (5)</button>
       </div>
     </header>
   );

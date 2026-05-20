@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -36,7 +37,7 @@
 
   --radius-card: 12px;
   --radius-pill: 9999px;
-  --font-ui: Neuemontreal, Arial, sans-serif;
+  --font-ui: Inter, Neuemontreal, Arial, sans-serif;
   --font-display: "Dentonvariabletest Vf", "Times New Roman", sans-serif;
   --font-editorial: "Times New Roman";
 }

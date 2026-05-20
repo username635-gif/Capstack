@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -13,7 +14,7 @@
   --color-border: rgba(217, 217, 217, 0.2);
   --color-glow: rgba(249, 248, 246, 0.65);
   --color-clear: rgba(255, 255, 255, 0);
-  --font-ui: Neuemontreal, Arial, sans-serif;
+  --font-ui: Inter, Neuemontreal, Arial, sans-serif;
   --font-display: "Dentonvariabletest Vf", "Times New Roman", sans-serif;
   --font-editorial: "Times New Roman";
 }
