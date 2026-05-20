@@ -1,3 +1,251 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
+
+// Design tokens (Tailwind classes follow the spec colours)
+type AIDecision = "approved" | "declined" | "escalated" | "manual_review";
+
+type AIOutput = {
+  decision: AIDecision;
+  confidence: number;
+  scoreband: "A" | "B" | "C" | "D" | "E";
+  reasoning: string[];
+  modelVersion: string;
+  processedAt: string;
+  overridden: boolean;
+  overrideReason?: string;
+  overriddenBy?: string;
+  overriddenAt?: string;
+};
+
+type ModelHealth = {
+  overrideRate: number;
+  overrideRateThreshold: number;
+  approvalRate: number;
+  defaultRate: number;
+  aiVsHumanAccuracy?: number;
+  drift: "stable" | "watch" | "alert";
+  lastCalibrated: string;
+};
+
+type ApplicationRes = {
+  id: string;
+  borrower: { id: string; fullName?: string; email?: string; idNumber?: string } | null;
+  product?: { name?: string } | null;
+  amountRequested: number;
+  termDaysRequested?: number;
+  submittedAt: string;
+  status: string;
+  aiOutput?: AIOutput | null;
+  audit?: { actor: string; action: string; when: string; payload?: unknown }[];
+};
+
+const SkeletonTable = ({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) => (
+  <div className="animate-pulse p-6 space-y-3">
+    {Array.from({ length: rows }).map((_, i) => (
+      <div key={i} className="flex gap-4">
+        {Array.from({ length: cols }).map((_, j) => (
+          <div key={j} className="h-4 bg-[#F1EFE8] rounded flex-1" />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+const ErrorState = ({ message, onRetry, lastSuccessful }: { message: string; onRetry: () => void; lastSuccessful?: string | null }) => (
+  <div className="flex flex-col items-center justify-center py-16 gap-3">
+    <AlertCircle className="text-[#A32D2D]" size={22} />
+    <p className="text-[13px] text-[#5F5E5A]">{message}</p>
+    {lastSuccessful && (
+      <p className="text-[11px] text-[#888780]">Last successful load: {lastSuccessful}</p>
+    )}
+    <button onClick={onRetry} className="px-4 py-1.5 text-[13px] border border-[rgba(0,0,0,0.10)] rounded-lg hover:bg-[#F8F8F7] text-[#1A1A18]">
+      Retry
+    </button>
+  </div>
+);
+
+function Pill({ variant = "gray", children }: { variant?: string; children: React.ReactNode }) {
+  const styles: Record<string, string> = {
+    green: "bg-[#EAF3DE] text-[#3B6D11] border-[#639922]",
+    amber: "bg-[#FAEEDA] text-[#854F0B] border-[#EF9F27]",
+    red: "bg-[#FCEBEB] text-[#A32D2D] border-[#E24B4A]",
+    blue: "bg-[#E6F1FB] text-[#185FA5] border-[#378ADD]",
+    purple: "bg-[#F0EAFB] text-[#5B2D8E] border-[#9B6DD1]",
+    gray: "bg-[#F1EFE8] text-[#5F5E5A] border-[rgba(0,0,0,0.10)]",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium border ${styles[variant]}`}>
+      {children}
+    </span>
+  );
+}
+
+export default function ApplicationDetail({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { id } = params;
+  const [data, setData] = useState<ApplicationRes | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    setIsError(false);
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/applications/${id}`);
+      if (!res.ok) throw new Error('fetch failed');
+      const payload = await res.json();
+      // normalize minimal shape
+      const app = payload?.data ? payload.data : payload;
+      setData(app as ApplicationRes);
+      setLastSuccess(new Date().toLocaleString());
+    } catch (err) {
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, [id]);
+
+  if (isLoading) return <SkeletonTable rows={6} cols={4} />;
+  if (isError) return <ErrorState message="Unable to load data." onRetry={fetchData} lastSuccessful={lastSuccess} />;
+  if (!data) return <div className="p-6">No records match the current filter.</div>;
+
+  const ai = data.aiOutput;
+
+  const confidenceColor = (n: number) => (n >= 80 ? 'green' : n >= 60 ? 'amber' : 'red');
+
+  return (
+    <div className="min-h-screen flex bg-[#F1EFE8] text-[#1A1A18]">
+      <aside className="w-52 p-4 border-r border-[rgba(0,0,0,0.10)]">
+        <div className="font-medium text-[15px]">Capstack Ops</div>
+        <div className="text-[13px] text-[#888780] mt-1">Internal ops console</div>
+        <nav className="mt-6 space-y-2 text-[13px]">
+          <div className="text-[#185FA5]">Applications</div>
+          <div className="text-[#5F5E5A]">Loans</div>
+        </nav>
+      </aside>
+
+      <main className="flex-1 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-[15px] font-medium">Application {data.id}</h1>
+            <div className="text-[12px] text-[#888780]">Submitted {new Date(data.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · Live</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.back()} className="px-3 py-1.5 bg-white border border-[rgba(0,0,0,0.10)] rounded-lg">Back</button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+          <section className="col-span-2 bg-white rounded-lg p-4 border border-[rgba(0,0,0,0.10)]">
+            <h2 className="text-[13px] font-medium mb-3">Borrower profile</h2>
+            <div className="grid grid-cols-2 gap-3 text-[13px]">
+              <div>
+                <div className="text-[11px] text-[#888780]">Name</div>
+                <div className="font-medium">{data.borrower?.fullName ?? 'Borrower record'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[#888780]">ID / Passport</div>
+                <div className="font-medium">{data.borrower?.idNumber ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[#888780]">Contact</div>
+                <div className="font-medium">{data.borrower?.email ?? '—'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[#888780]">Requested</div>
+                <div className="font-medium">R {(data.amountRequested / 100).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="text-[13px] font-medium mb-2">Document checklist</h3>
+              <ul className="text-[13px] space-y-1">
+                <li>ID ✓</li>
+                <li>Payslip ✓</li>
+                <li>Bank statement ✓</li>
+                <li>Proof of address ✗</li>
+              </ul>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="text-[13px] font-medium mb-2">Bureau / credit</h3>
+              <div className="text-[13px]">Score: <span className="font-medium">712</span></div>
+              <div className="text-[13px]">Adverse: None</div>
+              <div className="text-[13px]">DTI: <span className="font-medium">38%</span></div>
+            </div>
+          </section>
+
+          <aside className="col-span-1 bg-white rounded-lg p-4 border border-[rgba(0,0,0,0.10)]">
+            <h3 className="text-[13px] font-medium mb-3">AI Decision</h3>
+            {ai ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Pill variant="purple">{ai.decision === 'approved' ? 'AI approved' : ai.decision === 'declined' ? 'AI declined' : 'AI escalated'}</Pill>
+                  <div className="text-[11px] text-[#888780]">Model: {ai.modelVersion}</div>
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-[#888780]">Confidence</div>
+                  <div className="w-full h-3 bg-[#F8F8F7] rounded mt-1">
+                    <div style={{ width: `${ai.confidence}%` }} className={`h-3 rounded ${confidenceColor(ai.confidence) === 'green' ? 'bg-[#3B6D11]' : confidenceColor(ai.confidence) === 'amber' ? 'bg-[#854F0B]' : 'bg-[#A32D2D]'}`} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-[#888780]">Score band</div>
+                  <Pill variant="purple">{ai.scoreband}</Pill>
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-[#888780]">Reasoning</div>
+                  <ol className="list-decimal list-inside text-[13px] ml-2">
+                    {ai.reasoning.slice(0, 3).map((r, i) => <li key={i}>{r}</li>)}
+                  </ol>
+                </div>
+
+                <div className="pt-2 border-t border-[rgba(0,0,0,0.05)]"> 
+                  <div className="text-[11px] text-[#888780]">Offer terms</div>
+                  <div className="mt-2 text-[13px]">
+                    <div>Amount: R {(data.amountRequested / 100).toLocaleString()}</div>
+                    <div>Term: {data.termDaysRequested ? Math.round(data.termDaysRequested / 30) : '—'} months</div>
+                    <div>Rate: {(ai.decision === 'approved' ? 18 : 0)}% APR</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-3">
+                  <button className="px-3 py-1.5 bg-[#EAF3DE] text-[#3B6D11] rounded-lg">Approve & disburse</button>
+                  <button className="px-3 py-1.5 bg-[#F1EFE8] text-[#5F5E5A] rounded-lg">Override decision</button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[13px] text-[#888780]">No AI output available.</div>
+            )}
+          </aside>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg p-4 border border-[rgba(0,0,0,0.10)]">
+          <h3 className="text-[13px] font-medium mb-3">Audit trail</h3>
+          {data.audit && data.audit.length ? (
+            <ul className="space-y-2 text-[13px]">
+              {data.audit.map((e, i) => (
+                <li key={i} className="text-[13px]">{new Date(e.when).toLocaleString()} — {e.actor} — {e.action}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-[13px] text-[#888780]">No audit events yet.</div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
 'use client';
 
 import { use, useEffect, useState } from 'react';
