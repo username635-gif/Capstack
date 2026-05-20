@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Pill from '@/app/_components/Pill';
+import SkeletonTable from '@/app/_components/SkeletonTable';
+import ErrorState from '@/app/_components/ErrorState';
+import OverrideModal from '@/app/_components/OverrideModal';
 
 // Design tokens (Tailwind classes follow the spec colours)
 type AIDecision = "approved" | "declined" | "escalated" | "manual_review";
@@ -87,38 +91,39 @@ function Pill({ variant = "gray", children }: { variant?: string; children: Reac
 export default function ApplicationDetail({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
-  const [data, setData] = useState<ApplicationRes | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const [showOverride, setShowOverride] = React.useState(false);
 
-  const fetchData = async () => {
-    setIsError(false);
-    setIsLoading(true);
-    try {
+  const { data, isLoading, isError, refetch, error } = useQuery({
+    queryKey: ['application', id],
+    queryFn: async () => {
       const res = await fetch(`/api/v1/applications/${id}`);
       if (!res.ok) throw new Error('fetch failed');
       const payload = await res.json();
-      // normalize minimal shape
-      const app = payload?.data ? payload.data : payload;
-      setData(app as ApplicationRes);
-      setLastSuccess(new Date().toLocaleString());
-    } catch (err) {
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return payload?.data ? payload.data as ApplicationRes : (payload as ApplicationRes);
+    },
+    retry: 1,
+    staleTime: 1000 * 60,
+  });
 
-  useEffect(() => { fetchData(); }, [id]);
+  const overrideMutation = useMutation({
+    mutationFn: async (body: { actor: string; reason: string; newDecision: string }) => {
+      const res = await fetch(`/api/v1/applications/${id}/override`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error('override failed');
+      return res.json();
+    },
+    onSuccess: () => { qc.invalidateQueries(['application', id]); setShowOverride(false); },
+  });
 
   if (isLoading) return <SkeletonTable rows={6} cols={4} />;
-  if (isError) return <ErrorState message="Unable to load data." onRetry={fetchData} lastSuccessful={lastSuccess} />;
+  if (isError) return <ErrorState message={String((error as Error)?.message ?? 'Unable to load data.')} onRetry={() => refetch()} lastSuccessful={null} />;
+
   if (!data) return <div className="p-6">No records match the current filter.</div>;
 
   const ai = data.aiOutput;
-
   const confidenceColor = (n: number) => (n >= 80 ? 'green' : n >= 60 ? 'amber' : 'red');
+
+  const onSubmitOverride = async (payload: { actor: string; reason: string; newDecision: string }) => overrideMutation.mutate(payload);
 
   return (
     <div className="min-h-screen flex bg-[#F1EFE8] text-[#1A1A18]">
