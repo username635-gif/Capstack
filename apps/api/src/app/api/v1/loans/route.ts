@@ -219,6 +219,12 @@ export async function GET(req: NextRequest) {
         email: loan.borrower.email,
         phone: loan.borrower.phone,
         riskRating: loan.borrower.riskRating,
+        monthlyIncome:
+          loan.borrower.individual?.monthlyIncome != null
+            ? Number(loan.borrower.individual.monthlyIncome)
+            : loan.borrower.business?.monthlyTurnover != null
+              ? Number(loan.borrower.business.monthlyTurnover)
+              : null,
       },
       product: {
         id: loan.product.id,

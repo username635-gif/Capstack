@@ -98,7 +98,7 @@ export type {
   OnboardingTurnOutput,
   OnboardingStep,
   OnboardingData,
-} from './src/onboarding-agent';
+} from '@capstack/types';
 
 // ── Fraud detection ───────────────────────────────────────────────────────────
 export { detectFraud } from './src/fraud-detector';

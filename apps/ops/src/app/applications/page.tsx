@@ -6,7 +6,8 @@ import Link from 'next/link';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { getSession } from '@/lib/session';
 import { API_BASE_URL as API, buildOpsApiHeaders } from '@/lib/api-client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type {
   WorkflowStatus,
@@ -178,11 +179,11 @@ export default function ApplicationsPage() {
     return payload as ApplicationsResponse;
   }
 
-  const { data, isLoading, error } = useQuery(
-    ['applications', { filter, search: deferredSearch, page, sortKey, sortDirection }],
-    fetchApplications,
-    { keepPreviousData: true }
-  );
+  const { data, isLoading, error } = useQuery<ApplicationsResponse>({
+    queryKey: ['applications', { filter, search: deferredSearch, page, sortKey, sortDirection }],
+    queryFn: fetchApplications,
+    placeholderData: keepPreviousData,
+  });
 
   const applications = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -241,7 +242,7 @@ export default function ApplicationsPage() {
         throw new Error(payload?.error ?? `Unable to ${action} application.`);
       }
 
-      await queryClient.invalidateQueries(['applications']);
+      await queryClient.invalidateQueries({ queryKey: ['applications'] });
     } catch (submitError) {
       setActionError(submitError instanceof Error ? submitError.message : `Unable to ${action} application.`);
     } finally {
@@ -273,7 +274,7 @@ export default function ApplicationsPage() {
         throw new Error(result?.error ?? 'Unable to update application workflow.');
       }
 
-      await queryClient.invalidateQueries(['applications']);
+      await queryClient.invalidateQueries({ queryKey: ['applications'] });
     } catch (submitError) {
       setActionError(submitError instanceof Error ? submitError.message : 'Unable to update application workflow.');
     } finally {
@@ -415,7 +416,11 @@ export default function ApplicationsPage() {
     }),
   ] as const, [acting, rowAction, router]);
 
-  const table = useReactTable({ data: applications, columns, getCoreRowModel: getCoreRowModel() });
+  const table = useReactTable({
+    data: applications,
+    columns: columns as unknown as ColumnDef<ApiApplication>[],
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
     <OpsLayout
@@ -456,7 +461,7 @@ export default function ApplicationsPage() {
 
           <div className="rounded-xl px-4 py-3 text-sm min-w-[260px]" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
             <div className="font-semibold">
-              {loading ? 'Loading enterprise queue…' : `Showing ${fromRecord}-${toRecord} of ${total}`}
+              {isLoading ? 'Loading enterprise queue…' : `Showing ${fromRecord}-${toRecord} of ${total}`}
             </div>
             <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
               {counts.SUBMITTED} awaiting review · {counts.PENDING_DISBURSEMENT} pending disbursement · sorted by {sortKey === 'submittedAt' ? 'submitted date' : sortKey === 'amountRequested' ? 'amount' : 'term'} ({sortDirection})
@@ -501,7 +506,7 @@ export default function ApplicationsPage() {
 
         {error && (
           <div className="text-sm px-4 py-3 rounded-lg" style={{ background: 'var(--badge-declined-bg)', color: 'var(--badge-declined-fg)' }} role="alert" aria-live="polite">
-            {error}
+            {error instanceof Error ? error.message : 'Unable to load application queue.'}
           </div>
         )}
 

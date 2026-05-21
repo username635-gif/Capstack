@@ -44,6 +44,7 @@ export type LoanItem = {
     email: string;
     phone: string;
     riskRating?: string | null;
+    monthlyIncome?: number | null;
   };
   product: {
     id: string;

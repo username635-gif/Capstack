@@ -79,3 +79,51 @@ export type ReviewEvent = {
   createdAt: Date | string;
   payload?: unknown;
 };
+
+export type FairnessPeriod = '30d' | '90d' | '12m' | 'all';
+export type ScoreBand = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export interface FairnessProvinceRow {
+  province: string;
+  totalApplications: number;
+  approved: number;
+  approvalRate: number;
+  deviationFromMean: number;
+}
+
+export interface FairnessIncomeBandRow {
+  band: string;
+  label: string;
+  totalApplications: number;
+  approved: number;
+  approvalRate: number;
+  defaultRate: number;
+}
+
+export interface FairnessScoreBandRow {
+  band: ScoreBand;
+  count: number;
+  approvalRate: number;
+  predictedDefaultRate: number;
+  actualDefaultRate: number;
+}
+
+export interface FairnessAdviserRow {
+  adviserId: string;
+  adviserName: string;
+  totalDecisions: number;
+  overrideCount: number;
+  overrideRate: number;
+  overrideApprovalRate: number;
+  overrideDefaultRate: number;
+  flagged: boolean;
+}
+
+export interface FairnessReport {
+  approvalRateByProvince: FairnessProvinceRow[];
+  approvalRateByIncomeBand: FairnessIncomeBandRow[];
+  scoreBandDistribution: FairnessScoreBandRow[];
+  overrideAnalysisByAdviser: FairnessAdviserRow[];
+  dateRange: { from: string; to: string };
+  generatedAt: string;
+}

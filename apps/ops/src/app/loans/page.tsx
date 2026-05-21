@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { useLoans } from '@/hooks/useLoans';
 import { useLoansFilters } from '@/hooks/useLoansFilters';
@@ -41,7 +41,7 @@ function formatLabel(value: string) {
   return value.replace(/_/g, ' ');
 }
 
-export default function LoansPage() {
+function LoansPageInner() {
   const {
     filters,
     setStatus,
@@ -256,5 +256,13 @@ export default function LoansPage() {
         </label>
       </div>
     </OpsLayout>
+  );
+}
+
+export default function LoansPage() {
+  return (
+    <Suspense fallback={<OpsLayout title="Loans"><div className="text-sm text-[var(--color-muted)]">Loading…</div></OpsLayout>}>
+      <LoansPageInner />
+    </Suspense>
   );
 }

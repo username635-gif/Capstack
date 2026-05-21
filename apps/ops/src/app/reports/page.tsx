@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useEffectEvent, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Papa from 'papaparse';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { API_BASE_URL, buildOpsApiHeaders } from '@/lib/api-client';
@@ -354,9 +356,34 @@ export default function ReportsPage() {
     }
   };
 
+  const pathname = usePathname();
+
+  const reportNavigation = [
+    { label: 'Regulatory Reports', href: '/reports' },
+    { label: 'Fairness Report', href: '/reports/fairness' },
+    { label: 'Stress Test', href: '/reports/stress-test' },
+  ];
+
   return (
     <OpsLayout title="Regulatory Reports">
       <div className="flex flex-col gap-6">
+        {/* Navigation */}
+        <div className="flex gap-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+          {reportNavigation.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+              style={{
+                borderColor: pathname === item.href ? 'var(--color-secondary)' : 'transparent',
+                color: pathname === item.href ? 'var(--color-secondary)' : 'var(--color-muted)',
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
         <div className="rounded-2xl p-6 flex flex-col gap-5 xl:flex-row xl:items-end" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
           <div className="flex-1 flex flex-col gap-1.5">
             <label className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--color-muted)' }}>Report type</label>
