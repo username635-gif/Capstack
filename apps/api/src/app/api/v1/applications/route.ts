@@ -22,8 +22,8 @@ import {
   getSlaStatus,
   summarizeAmlRisk,
   summarizeKycStatus,
-  type WorkflowStatus,
 } from '@/lib/application-review';
+import type { WorkflowStatus } from '@capstack/types';
 
 const DEMO_MODE = !process.env.DATABASE_URL;
 const IDEMPOTENCY_TTL = 60 * 60 * 24;

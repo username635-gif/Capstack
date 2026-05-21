@@ -8,11 +8,17 @@ import { getSession } from '@/lib/session';
 import { API_BASE_URL as API, buildOpsApiHeaders } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import type {
+  WorkflowStatus,
+  SlaStatus,
+  AmlRisk,
+  BureauStatus,
+  ApprovalTier,
+  ReviewPriority,
+} from '@capstack/types';
 
-type WorkflowStatus = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
 type SortKey = 'amountRequested' | 'termDaysRequested' | 'submittedAt';
 type SortDirection = 'asc' | 'desc';
-type SlaStatus = 'WITHIN_SLA' | 'BREACH_SOON' | 'BREACHED';
 
 type ApiApplication = {
   id: string;
@@ -43,8 +49,8 @@ type ApiApplication = {
   noteCount: number;
   ageHours: number;
   slaStatus: SlaStatus;
-  approvalTier: 'AI_AUTO_ELIGIBLE' | 'ADVISOR_REVIEW' | 'MANAGER_SIGN_OFF';
-  reviewPriority: 'LOW' | 'MEDIUM' | 'HIGH';
+  approvalTier: ApprovalTier;
+  reviewPriority: ReviewPriority;
   underwriting: {
     recommendation?: string | null;
     riskBand?: string | null;
@@ -59,8 +65,8 @@ type ApiApplication = {
   };
   compliance: {
     kycStatus: string;
-    amlRisk: 'LOW' | 'MEDIUM' | 'HIGH';
-    bureauStatus: 'PULLED' | 'FAILED' | 'PENDING' | 'CONSENT_REQUIRED' | 'UNAVAILABLE';
+    amlRisk: AmlRisk;
+    bureauStatus: BureauStatus;
     bureauScore?: number | null;
   };
   affordability: {

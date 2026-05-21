@@ -17,6 +17,7 @@
     "@capstack/kyc": "workspace:^",
     "@capstack/ledger": "workspace:^",
     "@capstack/pricing": "workspace:^",
+    "@capstack/types": "workspace:^",
     "@react-pdf/renderer": "^4.5.1",
     "@upstash/redis": "^1.37.0",
     "inngest": "^4.3.0",

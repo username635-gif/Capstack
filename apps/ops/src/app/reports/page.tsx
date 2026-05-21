@@ -1,10 +1,111 @@
 'use client';
 
 import { useEffect, useEffectEvent, useState } from 'react';
+import Papa from 'papaparse';
 import OpsLayout from '@/app/_components/OpsLayout';
 import { API_BASE_URL, buildOpsApiHeaders } from '@/lib/api-client';
 
 type ReportType = 'ncr_monthly' | 'fica_ctr' | 'fica_sar' | 'nca_affordability' | 'ifrs9_ecl';
+
+type DownloadKey = 'ncr_monthly' | 'fica_sar' | 'nca_affordability';
+
+type DatePreset = 'this_month' | 'last_month' | 'last_3_months' | 'last_12_months' | 'custom';
+
+type DownloadState = {
+  loading: boolean;
+  success: boolean;
+  error: string | null;
+};
+
+const DATE_PRESETS: Array<{ value: DatePreset; label: string }> = [
+  { value: 'this_month', label: 'This month' },
+  { value: 'last_month', label: 'Last month' },
+  { value: 'last_3_months', label: 'Last 3 months' },
+  { value: 'last_12_months', label: 'Last 12 months' },
+  { value: 'custom', label: 'Custom range' },
+];
+
+const DOWNLOAD_REPORTS: Array<{ key: DownloadKey; label: string; apiType: ReportType }> = [
+  { key: 'ncr_monthly', label: 'Generate NCR return', apiType: 'ncr_monthly' },
+  { key: 'fica_sar', label: 'Generate FICA audit log', apiType: 'fica_sar' },
+  { key: 'nca_affordability', label: 'Generate AI decision log', apiType: 'nca_affordability' },
+];
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addMonths(date: Date, months: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function getPresetRange(preset: DatePreset) {
+  const now = new Date();
+  switch (preset) {
+    case 'this_month':
+      return { from: formatDateInput(startOfMonth(now)), to: formatDateInput(now) };
+    case 'last_month': {
+      const last = addMonths(now, -1);
+      return { from: formatDateInput(startOfMonth(last)), to: formatDateInput(endOfMonth(last)) };
+    }
+    case 'last_3_months': {
+      const from = addMonths(startOfMonth(now), -3);
+      return { from: formatDateInput(from), to: formatDateInput(now) };
+    }
+    case 'last_12_months': {
+      const from = addMonths(startOfMonth(now), -12);
+      return { from: formatDateInput(from), to: formatDateInput(now) };
+    }
+    default:
+      return { from: formatDateInput(startOfMonth(now)), to: formatDateInput(now) };
+  }
+}
+
+function normalizeCsvValue(value: unknown) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function flattenRow(value: Record<string, unknown>) {
+  const result: Record<string, string> = {};
+  for (const [key, cell] of Object.entries(value)) {
+    result[key] = normalizeCsvValue(cell);
+  }
+  return result;
+}
+
+function convertJsonToCsv(json: unknown) {
+  if (Array.isArray(json)) {
+    return Papa.unparse(json.map((row) => (typeof row === 'object' && row !== null ? flattenRow(row as Record<string, unknown>) : { value: normalizeCsvValue(row) })));
+  }
+
+  if (typeof json === 'object' && json !== null) {
+    return Papa.unparse([flattenRow(json as Record<string, unknown>)]);
+  }
+
+  return Papa.unparse([{ value: normalizeCsvValue(json) }]);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const anchor = document.createElement('a');
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
+}
 
 type PortfolioSummary = {
   reportType: string;
@@ -139,17 +240,19 @@ function filingStyles(status: 'ON_TRACK' | 'DUE_SOON' | 'OVERDUE') {
 }
 
 export default function ReportsPage() {
-  const [reportType, setReportType] = useState<ReportType>('ncr_monthly');
-  const [from, setFrom] = useState(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return date.toISOString().slice(0, 10);
-  });
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+    const [reportType, setReportType] = useState<ReportType>('ncr_monthly');
+  const [preset, setPreset] = useState<DatePreset>('this_month');
+  const [from, setFrom] = useState(() => getPresetRange('this_month').from);
+  const [to, setTo] = useState(() => getPresetRange('this_month').to);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [detail, setDetail] = useState<ReportPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadState, setDownloadState] = useState<Record<DownloadKey, DownloadState>>(() => ({
+    ncr_monthly: { loading: false, success: false, error: null },
+    fica_sar: { loading: false, success: false, error: null },
+    nca_affordability: { loading: false, success: false, error: null },
+  }));
 
   const loadDashboard = useEffectEvent(async () => {
     setLoading(true);
@@ -184,6 +287,72 @@ export default function ReportsPage() {
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    if (preset !== 'custom') {
+      const range = getPresetRange(preset);
+      setFrom(range.from);
+      setTo(range.to);
+    }
+  }, [preset]);
+
+  const downloadReport = async (key: DownloadKey, apiType: ReportType, label: string) => {
+    setDownloadState((current) => ({
+      ...current,
+      [key]: { loading: true, success: false, error: null },
+    }));
+
+    try {
+      const headers = await buildOpsApiHeaders();
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/reports?type=${apiType}&from=${from}&to=${to}`,
+        {
+          headers,
+          cache: 'no-store',
+        },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as any;
+        const message = payload?.error ?? `${label} download failed`;
+        throw new Error(message);
+      }
+
+      const contentType = response.headers.get('content-type') ?? '';
+      let blob: Blob;
+      if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        const csvText = convertJsonToCsv(payload);
+        blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+      } else {
+        const text = await response.text();
+        blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+      }
+
+      const filename = `capstack_${apiType}_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadBlob(blob, filename);
+
+      setDownloadState((current) => ({
+        ...current,
+        [key]: { loading: false, success: true, error: null },
+      }));
+      window.setTimeout(() => {
+        setDownloadState((current) => ({
+          ...current,
+          [key]: { ...current[key], success: false },
+        }));
+      }, 3000);
+    } catch (downloadError) {
+      setDownloadState((current) => ({
+        ...current,
+        [key]: {
+          loading: false,
+          success: false,
+          error: downloadError instanceof Error ? downloadError.message : 'Download failed',
+        },
+      }));
+    }
+  };
 
   return (
     <OpsLayout title="Regulatory Reports">
@@ -236,6 +405,88 @@ export default function ReportsPage() {
           >
             {loading ? 'Refreshing…' : 'Generate report'}
           </button>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <div>
+              <div className="mb-4 text-sm font-semibold">Download report files</div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {DOWNLOAD_REPORTS.map(({ key, label, apiType }) => {
+                  const state = downloadState[key];
+                  return (
+                    <div key={key} className="rounded-2xl border border-[var(--color-border)] p-4" style={{ background: 'var(--color-surface-2)' }}>
+                      <button
+                        type="button"
+                        onClick={() => void downloadReport(key, apiType, label)}
+                        disabled={state.loading}
+                        className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition-opacity disabled:opacity-60"
+                        style={{ background: 'var(--color-primary)', color: 'var(--color-primary-fg)' }}
+                      >
+                        {state.loading ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Downloading…
+                          </span>
+                        ) : state.success ? (
+                          'Downloaded ✓'
+                        ) : (
+                          label
+                        )}
+                      </button>
+                      {state.error ? (
+                        <p className="mt-3 text-xs text-[#A32D2D]">{state.error}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+              <div className="text-sm font-semibold mb-3">Date range presets</div>
+              <div className="grid gap-2">
+                {DATE_PRESETS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPreset(option.value)}
+                    className="rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors"
+                    style={{
+                      background: preset === option.value ? 'var(--color-primary)' : 'var(--color-surface-2)',
+                      color: preset === option.value ? 'var(--color-primary-fg)' : 'var(--color-muted)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {preset === 'custom' && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-[var(--color-muted)]">From</span>
+                    <input
+                      type="date"
+                      value={from}
+                      onChange={(event) => setFrom(event.target.value)}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-[var(--color-muted)]">To</span>
+                    <input
+                      type="date"
+                      value={to}
+                      onChange={(event) => setTo(event.target.value)}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {error && (

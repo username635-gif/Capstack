@@ -11,8 +11,8 @@ async function to<T>(p: Promise<T>): Promise<[Error, null] | [null, T]> {
   catch (err) { return [err instanceof Error ? err : new Error(String(err)), null]; }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   const [parseErr, body] = await to(req.json() as Promise<{ actor: string; reason: string; newDecision: string }>);
   if (parseErr) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 

@@ -37,30 +37,9 @@
  *   7. Property shorthand
  */
 
+import type { AuditEntry } from '@capstack/types';
+
 const SKIP_AUDIT = process.env.NODE_ENV === 'test';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface AuditEntry {
-  /** The identity that caused the change (Clerk userId, system, API key id). */
-  actor:       string;
-  /** The type of actor performing the action. */
-  actorType:   'BORROWER' | 'STAFF' | 'SYSTEM' | 'PARTNER_API';
-  /** Human-readable action code, e.g. LOAN_APPROVED, KYC_INITIATED, REPAYMENT_POSTED. */
-  action:      string;
-  /** Prisma model name of the affected resource, e.g. 'Loan', 'Application'. */
-  resource:    string;
-  /** Primary key of the affected record. */
-  resourceId:  string;
-  /** State of the record before the change (optional, for update actions). */
-  before?:     Record<string, unknown>;
-  /** State of the record after the change (optional). */
-  after?:      Record<string, unknown>;
-  /** Client IP address (use x-forwarded-for or CF-Connecting-IP headers). */
-  ip?:         string;
-  /** Freeform extra metadata. */
-  metadata?:   Record<string, unknown>;
-}
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 

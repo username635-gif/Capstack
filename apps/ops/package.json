@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capstack/types": "workspace:^",
     "@tanstack/react-query": "^5.100.11",
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^1.16.0",
     "next": "16.2.4",
+    "papaparse": "^5.5.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

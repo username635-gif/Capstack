@@ -3,6 +3,14 @@ import {
   computeAffordability,
   getAprByRiskBand,
 } from '@capstack/pricing';
+import type {
+  WorkflowStatus,
+  SlaStatus,
+  AmlRisk,
+  BureauStatus,
+  ApprovalTier,
+  ReviewEvent,
+} from '@capstack/types';
 
 export const REVIEW_QUEUE_STATUSES = [
   'SUBMITTED',
@@ -12,20 +20,6 @@ export const REVIEW_QUEUE_STATUSES = [
   'AUTO_DECISIONED',
   'HUMAN_REVIEW',
 ] as const;
-
-export type WorkflowStatus = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PENDING_DISBURSEMENT';
-export type SlaStatus = 'WITHIN_SLA' | 'BREACH_SOON' | 'BREACHED';
-export type AmlRisk = 'LOW' | 'MEDIUM' | 'HIGH';
-export type BureauStatus = 'PULLED' | 'FAILED' | 'PENDING' | 'CONSENT_REQUIRED' | 'UNAVAILABLE';
-export type ApprovalTier = 'AI_AUTO_ELIGIBLE' | 'ADVISOR_REVIEW' | 'MANAGER_SIGN_OFF';
-
-export type ReviewEvent = {
-  id?: string;
-  type: string;
-  actor?: string;
-  createdAt: Date | string;
-  payload?: unknown;
-};
 
 type SimpleDecision = {
   recommendation?: string | null;

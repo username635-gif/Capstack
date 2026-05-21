@@ -47,6 +47,9 @@ importers:
       '@capstack/pricing':
         specifier: workspace:^
         version: link:../../packages/pricing
+      '@capstack/types':
+        specifier: workspace:^
+        version: link:../../packages/types
       '@react-pdf/renderer':
         specifier: ^4.5.1
         version: 4.5.1(react@19.2.4)
@@ -133,6 +136,9 @@ importers:
 
   apps/ops:
     dependencies:
+      '@capstack/types':
+        specifier: workspace:^
+        version: link:../../packages/types
       '@tanstack/react-query':
         specifier: ^5.100.11
         version: 5.100.11(react@19.2.4)
@@ -145,6 +151,9 @@ importers:
       next:
         specifier: 16.2.4
         version: 16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      papaparse:
+        specifier: ^5.5.3
+        version: 5.5.3
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -247,6 +256,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@capstack/types':
+        specifier: workspace:^
+        version: link:../types
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
@@ -298,6 +310,8 @@ importers:
       '@capstack/ledger':
         specifier: workspace:*
         version: link:../ledger
+
+  packages/types: {}
 
 packages:
 
@@ -3673,6 +3687,9 @@ packages:
 
   pako@1.0.11:
     resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
+
+  papaparse@5.5.3:
+    resolution: {integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -8412,6 +8429,8 @@ snapshots:
   pako@0.2.9: {}
 
   pako@1.0.11: {}
+
+  papaparse@5.5.3: {}
 
   parent-module@1.0.1:
     dependencies:

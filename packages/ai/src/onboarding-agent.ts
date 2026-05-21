@@ -40,60 +40,18 @@
  *   8. Composition — advanceOnboarding orchestrates the step pipeline
  */
 
+import type {
+  OnboardingStep,
+  OnboardingMessage,
+  OnboardingSession,
+  OnboardingData,
+  OnboardingTurnInput,
+  OnboardingTurnOutput,
+} from '@capstack/types';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OnboardingStep =
-  | 'COLLECT_PERSONAL_DETAILS'
-  | 'LIVENESS_CHECK'
-  | 'DOCUMENT_UPLOAD'
-  | 'SANCTIONS_SCREEN'
-  | 'BANK_STATEMENT'
-  | 'INCOME_VERIFICATION'
-  | 'REVIEW_AND_CONFIRM'
-  | 'COMPLETE';
-
-export interface OnboardingMessage {
-  role:    'user' | 'agent';
-  content: string;
-  ts:      string;   // ISO 8601
-}
-
-export interface OnboardingSession {
-  sessionId:     string;
-  borrowerId:    string;
-  currentStep:   OnboardingStep;
-  completedSteps: OnboardingStep[];
-  history:       OnboardingMessage[];
-  collectedData: Partial<OnboardingData>;
-  createdAt:     string;
-  updatedAt:     string;
-}
-
-export interface OnboardingData {
-  fullName:         string;
-  idNumber:         string;
-  dateOfBirth:      string;
-  smileJobId?:      string;   // from Smile ID liveness check
-  documentJobId?:   string;   // from Smile ID DocV
-  sanctionsClear:   boolean;
-  bankStatementRef?: string;  // uploaded file reference
-  incomeRef?:       string;   // uploaded salary slip / financials
-}
-
-export interface OnboardingTurnInput {
-  sessionId:  string;
-  borrowerId: string;
-  userMessage: string;
-  currentSession?: OnboardingSession;  // passed in from session store
-}
-
-export interface OnboardingTurnOutput {
-  session:         OnboardingSession;
-  agentMessage:    string;
-  currentStep:     OnboardingStep;
-  isComplete:      boolean;
-  requiresAction?: 'UPLOAD_DOCUMENT' | 'OPEN_SMILE_SDK' | 'LINK_BANK';  // front-end action signals
-}
+// Shared onboarding types are now centralized in @capstack/types.
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
 

@@ -8,6 +8,7 @@ import Pill from '@/app/_components/Pill';
 import SkeletonTable from '@/app/_components/SkeletonTable';
 import ErrorState from '@/app/_components/ErrorState';
 import OverrideModal from '@/app/_components/OverrideModal';
+import type { SlaStatus, AmlRisk, BureauStatus, ApprovalTier } from '@capstack/types';
 
 // Design tokens (Tailwind classes follow the spec colours)
 type AIDecision = "approved" | "declined" | "escalated" | "manual_review";
@@ -391,7 +392,7 @@ type ApplicationDetail = {
       createdAt: string;
       completedAt?: string | null;
     }>;
-    amlRisk: 'LOW' | 'MEDIUM' | 'HIGH';
+    amlRisk: AmlRisk;
     amlAlerts: Array<{
       id: string;
       type: string;
@@ -402,7 +403,7 @@ type ApplicationDetail = {
       createdAt: string;
     }>;
     bureau: {
-      status: 'PULLED' | 'FAILED' | 'PENDING' | 'CONSENT_REQUIRED' | 'UNAVAILABLE';
+      status: BureauStatus;
       lastPulledAt?: string | null;
       provider?: string | null;
       bureauScore?: number | null;
@@ -420,7 +421,7 @@ type ApplicationDetail = {
     assignedAt?: string | null;
     ageHours: number;
     slaStatus: SlaStatus;
-    approvalTier: 'AI_AUTO_ELIGIBLE' | 'ADVISOR_REVIEW' | 'MANAGER_SIGN_OFF';
+    approvalTier: ApprovalTier;
     noteCount: number;
     latestNote?: string | null;
   };
