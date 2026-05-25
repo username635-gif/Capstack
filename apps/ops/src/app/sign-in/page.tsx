@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getOpsAuthModeLabel, getPublicOpsAuthConfig, OPS_SSO_PROVIDER_LABELS, type OpsSsoProvider } from '@/lib/auth-config';
 import { setSession } from '@/lib/session';
-import { MeshPatternOverlay } from '@/app/_components/MeshPatternOverlay';
+
 
 const AUTH_CONFIG = getPublicOpsAuthConfig();
 const AUTH_MODE_LABEL = getOpsAuthModeLabel(AUTH_CONFIG.mode);
 const SSO_PROVIDER_ORDER: OpsSsoProvider[] = ['google', 'microsoft'];
-const PARTICLE_COUNT = 70;
-const LINE_DISTANCE = 130;
-const MOUSE_DISTANCE = 160;
-const OFFSCREEN_MOUSE = { x: -999, y: -999 };
+
 
 function createParticle(width: number, height: number) {
   return {
@@ -57,9 +55,6 @@ function getCanvasPalette(mode: 'light' | 'dark') {
 
 export default function StaffSignIn() {
   const router   = useRouter();
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const mouseRef = useRef(OFFSCREEN_MOUSE);
   const [email,  setEmail]   = useState('');
   const [error,  setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,184 +81,30 @@ export default function StaffSignIn() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return undefined;
-    }
-
-    const wrapper = wrapperRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext('2d');
-    if (!wrapper || !canvas || !context) {
-      return undefined;
-    }
-
-    const particles: Array<{ x: number; y: number; vx: number; vy: number; radius: number }> = [];
-    const palette = getCanvasPalette(themeMode);
-    const dpr = Math.max(window.devicePixelRatio || 1, 1);
-    let width = 0;
-    let height = 0;
-    let animationFrameId = 0;
-
-    const resizeCanvas = () => {
-      width = wrapper.clientWidth;
-      height = wrapper.clientHeight;
-
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      if (particles.length === 0) {
-        for (let index = 0; index < PARTICLE_COUNT; index += 1) {
-          particles.push(createParticle(width, height));
-        }
-        return;
-      }
-
-      particles.forEach((particle) => {
-        particle.x = Math.min(Math.max(particle.x, particle.radius), width - particle.radius);
-        particle.y = Math.min(Math.max(particle.y, particle.radius), height - particle.radius);
-      });
-    };
-
-    const drawMouseGlow = () => {
-      const { x, y } = mouseRef.current;
-      if (x < 0 || y < 0) {
-        return;
-      }
-
-      const glow = context.createRadialGradient(x, y, 0, x, y, 360);
-      glow.addColorStop(0, palette.glowInner);
-      glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-      context.fillStyle = glow;
-      context.beginPath();
-      context.arc(x, y, 360, 0, Math.PI * 2);
-      context.fill();
-    };
-
-    const drawLines = () => {
-      for (let first = 0; first < particles.length; first += 1) {
-        for (let second = first + 1; second < particles.length; second += 1) {
-          const a = particles[first];
-          const b = particles[second];
-          const distance = Math.hypot(a.x - b.x, a.y - b.y);
-          if (distance > LINE_DISTANCE) {
-            continue;
-          }
-
-          const alpha = (1 - (distance / LINE_DISTANCE)) * palette.lineMaxAlpha;
-          context.strokeStyle = `rgba(${palette.lineRgb}, ${alpha})`;
-          context.lineWidth = 1;
-          context.beginPath();
-          context.moveTo(a.x, a.y);
-          context.lineTo(b.x, b.y);
-          context.stroke();
-        }
-      }
-
-      const { x, y } = mouseRef.current;
-      if (x < 0 || y < 0) {
-        return;
-      }
-
-      particles.forEach((particle) => {
-        const distance = Math.hypot(particle.x - x, particle.y - y);
-        if (distance > MOUSE_DISTANCE) {
-          return;
-        }
-
-        const alpha = (1 - (distance / MOUSE_DISTANCE)) * palette.mouseLineMaxAlpha;
-        context.strokeStyle = `rgba(${palette.mouseRgb}, ${alpha})`;
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(particle.x, particle.y);
-        context.lineTo(x, y);
-        context.stroke();
-      });
-    };
-
-    const drawNodes = () => {
-      particles.forEach((particle) => {
-        context.fillStyle = palette.nodeColor;
-        context.beginPath();
-        context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        context.fill();
-      });
-    };
-
-    const moveParticles = () => {
-      particles.forEach((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-
-        if (particle.x <= particle.radius || particle.x >= width - particle.radius) {
-          particle.vx *= -1;
-          particle.x = Math.min(Math.max(particle.x, particle.radius), width - particle.radius);
-        }
-
-        if (particle.y <= particle.radius || particle.y >= height - particle.radius) {
-          particle.vy *= -1;
-          particle.y = Math.min(Math.max(particle.y, particle.radius), height - particle.radius);
-        }
-      });
-    };
-
-    const animate = () => {
-      context.clearRect(0, 0, width, height);
-      drawMouseGlow();
-      drawLines();
-      drawNodes();
-      moveParticles();
-      animationFrameId = window.requestAnimationFrame(animate);
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const bounds = wrapper.getBoundingClientRect();
-      mouseRef.current = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
-      };
-    };
-
-    const handleMouseLeave = () => {
-      mouseRef.current = OFFSCREEN_MOUSE;
-    };
-
-    resizeCanvas();
-    animate();
-
-    wrapper.addEventListener('mousemove', handleMouseMove);
-    wrapper.addEventListener('mouseleave', handleMouseLeave);
-
-    let resizeObserver: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(resizeCanvas);
-      resizeObserver.observe(wrapper);
-    } else {
-      window.addEventListener('resize', resizeCanvas);
-    }
-
-    return () => {
-      window.cancelAnimationFrame(animationFrameId);
-      wrapper.removeEventListener('mousemove', handleMouseMove);
-      wrapper.removeEventListener('mouseleave', handleMouseLeave);
-
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', resizeCanvas);
-      }
-    };
-  }, [themeMode]);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
     setError(null);
+
+    // DEMO MODE: Instant sign-in, no artificial delay
+    if (AUTH_CONFIG.mode === 'demo') {
+      // Simulate a session object for demo mode.
+      // NOTE: OpsSession does not include a `mode` field; keep it strictly type-safe.
+      setSession({
+        id: 'ops-demo-1',
+        email,
+        name: 'Demo Admin',
+        role: 'ADMIN',
+        lender: { id: 'lender-demo', name: 'Capstack Demo Lender' },
+        type: 'staff',
+      });
+
+      setTimeout(() => {
+        router.replace('/dashboard');
+      }, 150); // Show "Signing in..." for a very brief moment
+      return;
+    }
 
     try {
       const res  = await fetch('/api/session', {
@@ -289,30 +130,14 @@ export default function StaffSignIn() {
 
   return (
     <div
-      ref={wrapperRef}
-      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+
+      className="min-h-screen flex items-center justify-center px-4 relative"
       style={{
         background: themeMode === 'dark'
           ? 'linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%), rgb(0, 0, 0)'
           : 'linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)',
       }}
     >
-      <MeshPatternOverlay mode={themeMode} />
-
-      <canvas
-        ref={canvasRef}
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 1,
-          pointerEvents: 'none',
-        }}
-      />
-
       <div
         className="w-full max-w-md rounded-2xl p-9 relative z-10"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}

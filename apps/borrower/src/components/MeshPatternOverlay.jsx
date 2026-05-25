@@ -22,7 +22,7 @@ const NODES = [
   [566, 88], [646, 132], [738, 104], [824, 168], [918, 146], [1014, 198], [598, 252], [782, 218], [912, 284],
 ];
 
-export default function MeshPatternOverlay({ mode }) {
+{
   const stroke = mode === 'dark' ? 'rgba(249, 248, 246, 0.16)' : 'rgba(14, 13, 12, 0.12)';
   const fill = mode === 'dark' ? 'rgba(249, 248, 246, 0.20)' : 'rgba(14, 13, 12, 0.16)';
 

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getSession, clearSession, loadServerSession, OpsSession } from '@/lib/session';
 import { ThemeToggle } from './ThemeProvider';
-import { InteractiveMeshSurface } from './InteractiveMeshSurface';
+
 
 const NAV = [
   { label: 'Dashboard',    href: '/' },
@@ -194,12 +194,12 @@ export default function OpsLayout({
   }
 
   return (
-    <InteractiveMeshSurface
+    <div
       className="min-h-screen"
-      contentClassName="relative z-10 flex min-h-screen"
-      lightBackground="linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)"
-      darkBackground="linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%), rgb(0, 0, 0)"
-      style={{ color: 'var(--foreground)' }}
+      style={{
+        background: `linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)`,
+        color: 'var(--foreground)',
+      }}
     >
       {calcOpen && <SimpleCalculator onClose={() => setCalcOpen(false)} />}
 
@@ -303,6 +303,6 @@ export default function OpsLayout({
 
         <main className="flex-1 overflow-auto p-8">{children}</main>
       </div>
-    </InteractiveMeshSurface>
+    </div>
   );
 }

@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# @capstack/borrower
 
-## Getting Started
+Capstack borrower-facing portal.
 
-First, run the development server:
+## What this app does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Marketing landing page (`/`)
+- Borrower auth (`/sign-in`)
+- Borrower registration (`/sign-up`)
+- Loan application flow (`/apply`)
+- Borrower dashboard (`/dashboard`) with active loans + applications (demo-first fallback, then background API refresh)
+- Downloads center (`/downloads`) for statements/agreements (demo fallback if API is unavailable)
+
+## Local dev
+
+```sh
+pnpm install
+pnpm dev:borrower
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ports:
+- API: `http://localhost:3000`
+- Borrower: `http://localhost:3001`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project structure (quick map)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/*` — pages and routes
+- `src/lib/session.ts` — borrower session storage/timeout
+- `src/proxy.ts` — proxy helpers for same-origin API calls
+- `src/components/*` — UI building blocks (hero background, overlays, etc.)
 
-## Learn More
+## Demo vs live behavior
 
-To learn more about Next.js, take a look at the following resources:
+Some pages are **hybrid**:
+- UI renders with demo/fixture state immediately.
+- Then it attempts to fetch live data in the background.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This is intentional so the portal remains usable even when integration credentials/providers are not configured.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Verification
 
-## Deploy on Vercel
+Run:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```sh
+pnpm -C apps/borrower build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

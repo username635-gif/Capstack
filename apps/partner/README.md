@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# @capstack/partner
 
-## Getting Started
+Capstack partner portal — product discovery and partner intake flows.
 
-First, run the development server:
+## What this app does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Key pages:
+
+- `/` — partner landing page
+- `/sign-in` — partner auth
+- `/products` — product catalog
+- `/applications` — partner applications table
+- `/applications/new` — multi-step partner submission flow
+- `/loans` — partner loans view
+- `/reports` — partner report view
+- `/api-keys` — API key management UI
+- `/settings` — partner settings
+
+## Local dev
+
+```sh
+pnpm install
+pnpm dev:partner
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ports:
+- API: `http://localhost:3000`
+- Partner: `http://localhost:3003`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo vs live behavior
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The partner portal contains both live hooks and demo-backed screens.
+Where providers/integration credentials are not configured, demo fallback state ensures the UX remains navigable.
 
-## Learn More
+## Project structure (quick map)
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app/*` — pages
+- `src/lib/*` — partner session + client helpers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Verification
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run:
 
-## Deploy on Vercel
+```sh
+pnpm -C apps/partner build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

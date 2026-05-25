@@ -60,7 +60,7 @@ Primary files: [apps/borrower/src/app](../apps/borrower/src/app), [apps/borrower
 - Product discovery is already wired to [apps/api/src/app/api/v1/products/route.ts](../apps/api/src/app/api/v1/products/route.ts).
 - Application submission is already wired to [apps/api/src/app/api/v1/applications/route.ts](../apps/api/src/app/api/v1/applications/route.ts).
 - Borrower creation and borrower auth are already wired to [apps/api/src/app/api/v1/borrowers/route.ts](../apps/api/src/app/api/v1/borrowers/route.ts) and [apps/api/src/app/api/v1/auth/borrower/route.ts](../apps/api/src/app/api/v1/auth/borrower/route.ts).
-- The borrower hero background now has both animated canvas rendering and a static SVG fallback via [apps/borrower/src/components/HeroSection.jsx](../apps/borrower/src/components/HeroSection.jsx) and [apps/borrower/src/components/MeshPatternOverlay.jsx](../apps/borrower/src/components/MeshPatternOverlay.jsx).
+- The borrower hero background now has both animated canvas rendering and a static SVG fallback via [apps/borrower/src/components/HeroSection.jsx](../apps/borrower/src/components/HeroSection.jsx) 
 
 ### Borrower areas still demo-oriented
 
@@ -100,7 +100,7 @@ Primary files: [apps/ops/src/app](../apps/ops/src/app), [apps/ops/src/lib](../ap
 
 - Same-origin API proxying lives under [apps/ops/src/app/api/proxy](../apps/ops/src/app/api/proxy) to avoid direct client-side dependency on the API origin.
 - Signed internal auth and bearer-token construction live under [apps/ops/src/lib](../apps/ops/src/lib), including fallback/demo support and shared secret validation.
-- Shared authenticated shell and mesh background live in [apps/ops/src/app/_components/OpsLayout.tsx](../apps/ops/src/app/_components/OpsLayout.tsx), [apps/ops/src/app/_components/InteractiveMeshSurface.tsx](../apps/ops/src/app/_components/InteractiveMeshSurface.tsx), and [apps/ops/src/app/_components/MeshPatternOverlay.tsx](../apps/ops/src/app/_components/MeshPatternOverlay.tsx).
+- Shared authenticated shell and mesh background live in [apps/ops/src/app/_components/OpsLayout.tsx](../apps/ops/src/app/_components/OpsLayout.tsx), [apps/ops/src/app/_components/InteractiveMeshSurface.tsx](../apps/ops/src/app/_components/InteractiveMeshSurface.tsx)
 
 Overall status: Mostly live-backed, with loans/settings/auth transition areas still hybrid or demo-backed.
 

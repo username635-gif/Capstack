@@ -18,7 +18,8 @@ apps/
   borrower/   → Borrower-facing portal (port 3001)
   ops/        → Internal operations dashboard (port 3002)
   partner/    → Lending partner portal (port 3003)
-  workers/    → Background job runner (BullMQ / Inngest — coming soon)
+  workers/    → Background job runner (BullMQ / Inngest)
+
 
 packages/
   db/           → Prisma client singleton + Neon adapter

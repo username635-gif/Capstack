@@ -1,68 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-
-import MeshPatternOverlay from './MeshPatternOverlay';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const APPLY_START_HREF = '/sign-up?next=/apply';
 const VIEW_APPLICATION_HREF = '/sign-in?next=/dashboard';
-const PARTICLE_COUNT = 70;
-const LINE_DISTANCE = 130;
-const MOUSE_DISTANCE = 160;
-const OFFSCREEN_MOUSE = { x: -999, y: -999 };
 
-function createParticle(width, height) {
-  return {
-    x: Math.random() * width,
-    y: Math.random() * height,
-    vx: (Math.random() * 0.6) - 0.3,
-    vy: (Math.random() * 0.6) - 0.3,
-    radius: 1 + (Math.random() * 1.5),
-  };
-}
+const OFFSCREEN_MOUSE = { x: -999, y: -999 };
+const PARTICLE_COUNT = 70;
+const LINE_DIST = 130;
 
 function getInitialMode() {
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
+  if (typeof window === 'undefined') return 'light';
 
   const saved = window.localStorage.getItem('capstack_theme');
-  if (saved === 'dark' || saved === 'light') {
-    return saved;
-  }
+  if (saved === 'dark' || saved === 'light') return saved;
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function getCanvasPalette(mode) {
-  if (mode === 'dark') {
-    return {
-      nodeColor: 'rgba(255, 255, 255, 0.36)',
-      lineRgb: '255, 255, 255',
-      lineMaxAlpha: 0.16,
-      mouseRgb: '92, 219, 122',
-      mouseLineMaxAlpha: 0.24,
-      glowInner: 'rgba(92, 219, 122, 0.10)',
-    };
-  }
-
-  return {
-    nodeColor: 'rgba(0, 0, 0, 0.28)',
-    lineRgb: '0, 0, 0',
-    lineMaxAlpha: 0.12,
-    mouseRgb: '0, 0, 0',
-    mouseLineMaxAlpha: 0.26,
-    glowInner: 'rgba(0, 0, 0, 0.07)',
-  };
 }
 
 export default function HeroSection() {
   const wrapperRef = useRef(null);
   const canvasRef = useRef(null);
   const mouseRef = useRef(OFFSCREEN_MOUSE);
+  const rafRef = useRef(0);
+
   const [mode, setMode] = useState('light');
 
+  const particlesRef = useRef([]);
+
+  // Keep drawing logic in a single effect so it can't get corrupted by partial edits.
   useEffect(() => {
     const preferred = getInitialMode();
     setMode(preferred);
@@ -71,141 +38,80 @@ export default function HeroSection() {
   }, []);
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return undefined;
-    }
+    if (!wrapperRef.current || !canvasRef.current) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const wrapper = wrapperRef.current;
     const canvas = canvasRef.current;
-    const context = canvas?.getContext('2d');
 
-    if (!wrapper || !canvas || !context) {
-      return undefined;
-    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const particles = [];
-    const palette = getCanvasPalette(mode);
-    const dpr = Math.max(window.devicePixelRatio || 1, 1);
-    let animationFrameId = 0;
-    let width = 0;
-    let height = 0;
+    const createParticle = (width, height) => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() * 0.6) - 0.3,
+      vy: (Math.random() * 0.6) - 0.3,
+      r: 1 + (Math.random() * 1.5),
+    });
 
-    const resizeCanvas = () => {
-      width = wrapper.clientWidth;
-      height = wrapper.clientHeight;
+    const resize = () => {
+      const { width, height } = wrapper.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(width));
+      canvas.height = Math.max(1, Math.floor(height));
 
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      if (particles.length === 0) {
-        for (let index = 0; index < PARTICLE_COUNT; index += 1) {
-          particles.push(createParticle(width, height));
-        }
-        return;
-      }
-
-      particles.forEach((particle) => {
-        particle.x = Math.min(Math.max(particle.x, particle.radius), width - particle.radius);
-        particle.y = Math.min(Math.max(particle.y, particle.radius), height - particle.radius);
-      });
+      particlesRef.current = Array.from({ length: PARTICLE_COUNT }, () => createParticle(canvas.width, canvas.height));
     };
 
-    const drawMouseGlow = () => {
-      const { x, y } = mouseRef.current;
-      if (x < 0 || y < 0) {
-        return;
-      }
+    const draw = () => {
+      const w = canvas.width;
+      const h = canvas.height;
 
-      const glow = context.createRadialGradient(x, y, 0, x, y, 360);
-      glow.addColorStop(0, palette.glowInner);
-      glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.clearRect(0, 0, w, h);
 
-      context.fillStyle = glow;
-      context.beginPath();
-      context.arc(x, y, 360, 0, Math.PI * 2);
-      context.fill();
-    };
+      // Mouse glow
+      const m = mouseRef.current;
+      const glowRadius = 120;
+      const distToMouse = (x, y) => Math.hypot(x - m.x, y - m.y);
 
-    const drawLines = () => {
-      for (let first = 0; first < particles.length; first += 1) {
-        for (let second = first + 1; second < particles.length; second += 1) {
-          const a = particles[first];
-          const b = particles[second];
-          const deltaX = a.x - b.x;
-          const deltaY = a.y - b.y;
-          const distance = Math.hypot(deltaX, deltaY);
+      const particles = particlesRef.current;
 
-          if (distance > LINE_DISTANCE) {
-            continue;
+      // Lines
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+          if (d < LINE_DIST) {
+            const alpha = (1 - d / LINE_DIST) * 0.1;
+            ctx.strokeStyle = `rgba(120, 120, 120, ${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
           }
-
-          const alpha = (1 - (distance / LINE_DISTANCE)) * palette.lineMaxAlpha;
-          context.strokeStyle = `rgba(${palette.lineRgb}, ${alpha})`;
-          context.lineWidth = 1;
-          context.beginPath();
-          context.moveTo(a.x, a.y);
-          context.lineTo(b.x, b.y);
-          context.stroke();
         }
       }
 
-      const { x, y } = mouseRef.current;
-      if (x < 0 || y < 0) {
-        return;
+      // Nodes + mouse interaction
+      for (const p of particles) {
+        const d = distToMouse(p.x, p.y);
+        const t = Math.max(0, 1 - d / glowRadius);
+        const nodeAlpha = 0.35 + t * 0.4;
+
+        ctx.fillStyle = `rgba(0, 0, 0, ${nodeAlpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < p.r || p.x > w - p.r) p.vx *= -1;
+        if (p.y < p.r || p.y > h - p.r) p.vy *= -1;
       }
 
-      particles.forEach((particle) => {
-        const distance = Math.hypot(particle.x - x, particle.y - y);
-        if (distance > MOUSE_DISTANCE) {
-          return;
-        }
-
-        const alpha = (1 - (distance / MOUSE_DISTANCE)) * palette.mouseLineMaxAlpha;
-        context.strokeStyle = `rgba(${palette.mouseRgb}, ${alpha})`;
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(particle.x, particle.y);
-        context.lineTo(x, y);
-        context.stroke();
-      });
-    };
-
-    const drawNodes = () => {
-      particles.forEach((particle) => {
-        context.fillStyle = palette.nodeColor;
-        context.beginPath();
-        context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        context.fill();
-      });
-    };
-
-    const moveParticles = () => {
-      particles.forEach((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-
-        if (particle.x <= particle.radius || particle.x >= width - particle.radius) {
-          particle.vx *= -1;
-          particle.x = Math.min(Math.max(particle.x, particle.radius), width - particle.radius);
-        }
-
-        if (particle.y <= particle.radius || particle.y >= height - particle.radius) {
-          particle.vy *= -1;
-          particle.y = Math.min(Math.max(particle.y, particle.radius), height - particle.radius);
-        }
-      });
-    };
-
-    const animate = () => {
-      context.clearRect(0, 0, width, height);
-      drawMouseGlow();
-      drawLines();
-      drawNodes();
-      moveParticles();
-      animationFrameId = window.requestAnimationFrame(animate);
+      rafRef.current = window.requestAnimationFrame(draw);
     };
 
     const handleMouseMove = (event) => {
@@ -220,37 +126,48 @@ export default function HeroSection() {
       mouseRef.current = OFFSCREEN_MOUSE;
     };
 
-    resizeCanvas();
-    animate();
+    resize();
 
     wrapper.addEventListener('mousemove', handleMouseMove);
     wrapper.addEventListener('mouseleave', handleMouseLeave);
 
-    let resizeObserver;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(resizeCanvas);
-      resizeObserver.observe(wrapper);
-    } else {
-      window.addEventListener('resize', resizeCanvas);
-    }
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    if (ro) ro.observe(wrapper);
+    else window.addEventListener('resize', resize);
+
+    rafRef.current = window.requestAnimationFrame(draw);
 
     return () => {
-      window.cancelAnimationFrame(animationFrameId);
       wrapper.removeEventListener('mousemove', handleMouseMove);
       wrapper.removeEventListener('mouseleave', handleMouseLeave);
 
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', resizeCanvas);
-      }
+      if (ro) ro.disconnect();
+      else window.removeEventListener('resize', resize);
+
+      window.cancelAnimationFrame(rafRef.current);
     };
-  }, [mode]);
+  }, []);
+
+  const gradientStyle = useMemo(() => {
+    // Theme is handled by documentElement data-theme + global CSS.
+    // Keep this inline style minimal and safe.
+    return {
+      background:
+        'linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)',
+    };
+  }, []);
 
   return (
-    <section ref={wrapperRef} className={`capstackHero ${mode}`}>
-      <MeshPatternOverlay mode={mode} />
-      <canvas ref={canvasRef} className="capstackHero__canvas" aria-hidden="true" />
+    <section
+      ref={wrapperRef}
+      className="capstackHero"
+      style={gradientStyle}
+    >
+      <canvas
+        ref={canvasRef}
+        className="capstackHero__canvas"
+        aria-hidden="true"
+      />
 
       <div className="capstackHero__content">
         <nav className="capstackHero__nav" aria-label="Primary">
@@ -287,9 +204,7 @@ export default function HeroSection() {
         <div className="capstackHero__main">
           <div className="capstackHero__eyebrow">Fast · Transparent · Fair</div>
 
-          <h1 className="capstackHero__headline">
-            Finance that moves at the speed of your next decision.
-          </h1>
+          <h1 className="capstackHero__headline">Finance that moves at the speed of your next decision.</h1>
 
           <p className="capstackHero__copy">
             Apply for a personal or business loan in minutes, track every step securely, and access clear terms with enterprise-grade reliability.
@@ -332,24 +247,9 @@ export default function HeroSection() {
           font-family: Neuemontreal, Arial, sans-serif;
         }
 
-        .capstackHero.light {
-          background:
-            linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%),
-            rgb(249, 248, 246);
-          color: rgb(14, 13, 12);
-        }
-
-        .capstackHero.dark {
-          background:
-            linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%),
-            rgb(0, 0, 0);
-          color: rgb(249, 248, 246);
-        }
-
         .capstackHero__canvas {
           position: absolute;
-          top: 0;
-          left: 0;
+          inset: 0;
           width: 100%;
           height: 100%;
           z-index: 1;
@@ -358,7 +258,7 @@ export default function HeroSection() {
 
         .capstackHero__content {
           position: relative;
-          z-index: 1;
+          z-index: 2;
           width: min(100%, 80rem);
           margin: 0 auto;
           padding: 1.5rem 1.5rem 5rem;
@@ -499,114 +399,35 @@ export default function HeroSection() {
           line-height: 1.5;
         }
 
-        .capstackHero.light .capstackHero__toggle,
-        .capstackHero.light .capstackHero__navLink {
+        .capstackHero.light {
+          background: linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246);
           color: rgb(14, 13, 12);
-          border-color: rgba(0, 0, 0, 0.14);
         }
 
-        .capstackHero.light .capstackHero__toggle:hover,
-        .capstackHero.light .capstackHero__navLink:hover,
-        .capstackHero.light .capstackHero__navCta:hover,
-        .capstackHero.light .capstackHero__button:hover {
-          transform: translateY(-1px);
-        }
-
-        .capstackHero.light .capstackHero__navCta {
-          background: rgb(14, 13, 12);
+        .capstackHero.dark {
+          background: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%), rgb(0, 0, 0);
           color: rgb(249, 248, 246);
-        }
-
-        .capstackHero.light .capstackHero__eyebrow,
-        .capstackHero.light .capstackHero__meta > div {
-          color: rgb(32, 32, 31);
-          border-color: rgba(0, 0, 0, 0.12);
-          background: rgba(255, 255, 255, 0.42);
-        }
-
-        .capstackHero.light .capstackHero__copy,
-        .capstackHero.light .capstackHero__meta span {
-          color: rgba(14, 13, 12, 0.72);
-        }
-
-        .capstackHero.light .capstackHero__button--primary {
-          background: rgb(14, 13, 12);
-          color: rgb(249, 248, 246);
-          border-color: rgb(14, 13, 12);
-        }
-
-        .capstackHero.light .capstackHero__button--secondary {
-          background: transparent;
-          color: rgb(14, 13, 12);
-          border-color: rgba(14, 13, 12, 0.42);
-        }
-
-        .capstackHero.dark .capstackHero__toggle,
-        .capstackHero.dark .capstackHero__navLink {
-          color: rgb(249, 248, 246);
-          border-color: rgba(249, 248, 246, 0.24);
-        }
-
-        .capstackHero.dark .capstackHero__toggle:hover,
-        .capstackHero.dark .capstackHero__navLink:hover,
-        .capstackHero.dark .capstackHero__navCta:hover,
-        .capstackHero.dark .capstackHero__button:hover {
-          transform: translateY(-1px);
-        }
-
-        .capstackHero.dark .capstackHero__navCta {
-          background: rgb(249, 248, 246);
-          color: rgb(0, 0, 0);
-        }
-
-        .capstackHero.dark .capstackHero__eyebrow,
-        .capstackHero.dark .capstackHero__meta > div {
-          color: rgba(249, 248, 246, 0.9);
-          border-color: rgba(249, 248, 246, 0.14);
-          background: rgba(14, 13, 12, 0.52);
-        }
-
-        .capstackHero.dark .capstackHero__copy,
-        .capstackHero.dark .capstackHero__meta span {
-          color: rgba(249, 248, 246, 0.72);
-        }
-
-        .capstackHero.dark .capstackHero__button--primary {
-          background: rgb(249, 248, 246);
-          color: rgb(0, 0, 0);
-          border-color: rgb(249, 248, 246);
-        }
-
-        .capstackHero.dark .capstackHero__button--secondary {
-          background: transparent;
-          color: rgb(249, 248, 246);
-          border-color: rgba(249, 248, 246, 0.42);
         }
 
         @media (max-width: 900px) {
           .capstackHero {
             min-height: 40rem;
           }
-
           .capstackHero__content {
             padding-bottom: 4rem;
           }
-
           .capstackHero__nav {
             flex-direction: column;
             align-items: stretch;
           }
-
           .capstackHero__navActions {
             justify-content: stretch;
           }
-
           .capstackHero__toggle,
           .capstackHero__navLink,
           .capstackHero__navCta {
             text-align: center;
           }
-
           .capstackHero__meta {
             grid-template-columns: 1fr;
           }
@@ -617,16 +438,13 @@ export default function HeroSection() {
             padding-left: 1rem;
             padding-right: 1rem;
           }
-
           .capstackHero__main {
             padding-top: 4.25rem;
           }
-
           .capstackHero__actions {
             width: 100%;
             flex-direction: column;
           }
-
           .capstackHero__button {
             width: 100%;
           }
@@ -635,3 +453,4 @@ export default function HeroSection() {
     </section>
   );
 }
+
