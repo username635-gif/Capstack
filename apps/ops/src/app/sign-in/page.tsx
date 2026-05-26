@@ -47,9 +47,7 @@ export default function StaffSignIn() {
         type: 'staff',
       });
 
-      setTimeout(() => {
-        router.replace('/dashboard');
-      }, 150); // Show "Signing in..." for a very brief moment
+      router.replace('/applications');
       return;
     }
 

@@ -18,6 +18,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo') {
+    return NextResponse.next();
+  }
+
   const session = await parseOpsAuthCookie(req.cookies.get(OPS_AUTH_COOKIE)?.value);
   if (session) return NextResponse.next();
 
