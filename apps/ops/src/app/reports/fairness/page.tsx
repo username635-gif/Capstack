@@ -230,10 +230,10 @@ export default function FairnessReportPage() {
         </section>
       )}
       {data && (
-        <section className="mb-12">
+        <section className="mb-12" style={{ color: 'var(--foreground)' }}>
           <h2 className="text-lg font-semibold mb-4">AI Score Band Performance</h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
+            <table className="min-w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--color-surface-2)' }}>
                   <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Band</th>
@@ -252,12 +252,12 @@ export default function FairnessReportPage() {
                   else if (variance < 0) varianceColor = "text-[#3B6D11] font-semibold";
                   return (
                     <tr key={row.band}>
-                      <td className="px-3 py-2 border text-center">{row.band}</td>
-                      <td className="px-3 py-2 border text-center">{row.count}</td>
-                      <td className="px-3 py-2 border text-center">{pctFormatter(row.approvalRate)}</td>
-                      <td className="px-3 py-2 border text-center">{pctFormatter(row.predictedDefaultRate)}</td>
-                      <td className="px-3 py-2 border text-center">{pctFormatter(row.actualDefaultRate)}</td>
-                      <td className={`px-3 py-2 border text-center ${varianceColor}`}>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{row.band}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{row.count}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{pctFormatter(row.approvalRate)}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{pctFormatter(row.predictedDefaultRate)}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{pctFormatter(row.actualDefaultRate)}</td>
+                      <td className={`px-3 py-2 text-center ${varianceColor}`} style={{ border: '1px solid var(--color-border)' }}>
                         {variance > 0 ? "+" : ""}{(variance * 100).toFixed(1)}%
                       </td>
                     </tr>
@@ -269,10 +269,10 @@ export default function FairnessReportPage() {
         </section>
       )}
       {data && (
-        <section className="mb-12">
+        <section className="mb-12" style={{ color: 'var(--foreground)' }}>
           <h2 className="text-lg font-semibold mb-4">Override Analysis by Adviser</h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
+            <table className="min-w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--color-surface-2)' }}>
                   <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Adviser</th>
@@ -290,17 +290,17 @@ export default function FairnessReportPage() {
                   .sort((a: FairnessAdviserRow, b: FairnessAdviserRow) => b.overrideRate - a.overrideRate)
                   .map((row) => (
                     <tr key={row.adviserId}>
-                      <td className="px-3 py-2 border text-center">{row.adviserName}</td>
-                      <td className="px-3 py-2 border text-center">{row.totalDecisions}</td>
-                      <td className="px-3 py-2 border text-center">{row.overrideCount}</td>
-                      <td className="px-3 py-2 border text-center">{pctFormatter(row.overrideRate)}</td>
-                      <td className="px-3 py-2 border text-center">
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{row.adviserName}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{row.totalDecisions}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{row.overrideCount}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>{pctFormatter(row.overrideRate)}</td>
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>
                         {row.overrideCount > 0 ? pctFormatter(row.overrideApprovalRate) : "—"}
                       </td>
-                      <td className="px-3 py-2 border text-center">
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>
                         {row.overrideCount > 0 ? pctFormatter(row.overrideDefaultRate) : "—"}
                       </td>
-                      <td className="px-3 py-2 border text-center">
+                      <td className="px-3 py-2 text-center" style={{ border: '1px solid var(--color-border)' }}>
                         {row.flagged ? (
                           <span className="inline-block px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
                             Monitor
