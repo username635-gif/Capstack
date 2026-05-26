@@ -235,13 +235,13 @@ export default function FairnessReportPage() {
           <div className="overflow-x-auto">
             <table className="min-w-full border text-sm">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-3 py-2 border">Band</th>
-                  <th className="px-3 py-2 border">Applications</th>
-                  <th className="px-3 py-2 border">Approval rate</th>
-                  <th className="px-3 py-2 border">AI predicted default</th>
-                  <th className="px-3 py-2 border">Actual default</th>
-                  <th className="px-3 py-2 border">Variance</th>
+                <tr style={{ background: 'var(--color-surface-2)' }}>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Band</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Applications</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Approval rate</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>AI predicted default</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Actual default</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Variance</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,14 +274,14 @@ export default function FairnessReportPage() {
           <div className="overflow-x-auto">
             <table className="min-w-full border text-sm">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-3 py-2 border">Adviser</th>
-                  <th className="px-3 py-2 border">Decisions</th>
-                  <th className="px-3 py-2 border">Overrides</th>
-                  <th className="px-3 py-2 border">Override rate</th>
-                  <th className="px-3 py-2 border">Override approval rate</th>
-                  <th className="px-3 py-2 border">Override default rate</th>
-                  <th className="px-3 py-2 border">Flag</th>
+                <tr style={{ background: 'var(--color-surface-2)' }}>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Adviser</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Decisions</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Overrides</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override rate</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override approval rate</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override default rate</th>
+                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Flag</th>
                 </tr>
               </thead>
               <tbody>

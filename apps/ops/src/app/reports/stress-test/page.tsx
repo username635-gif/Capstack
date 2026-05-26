@@ -146,9 +146,12 @@ export default function StressTestPage() {
       style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh' }}
     >
       {/* Disclaimer */}
-      <div className="mb-6 p-4 rounded-lg" style={{ background: '#FFFBEB', border: '1px solid #FDE047' }}>
-        <p className="text-xs text-[#92400E]">
-          <strong>Disclaimer:</strong> This stress test is a simulation tool intended to estimate portfolio behavior under adverse scenarios. Results are probabilistic estimates based on historical patterns and loan characteristics. These projections should not be relied upon as actual forecasts. Use for scenario planning and risk management purposes only.
+      <div
+        className="mb-6 p-4 rounded-lg"
+        style={{ background: 'var(--color-surface-2)', border: '0.5px solid var(--color-border)' }}
+      >
+        <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+          <strong style={{ color: 'var(--foreground)' }}>Disclaimer:</strong> This stress test is a simulation tool intended to estimate portfolio behavior under adverse scenarios. Results are probabilistic estimates based on historical patterns and loan characteristics. These projections should not be relied upon as actual forecasts. Use for scenario planning and risk management purposes only.
         </p>
       </div>
 
@@ -232,7 +235,14 @@ export default function StressTestPage() {
             </button>
 
             {error && (
-              <div className="mt-4 p-3 rounded-lg text-sm" style={{ background: '#FEE2E2', color: '#991B1B' }}>
+              <div
+                className="mt-4 p-3 rounded-lg text-sm"
+                style={{
+                  background: 'var(--color-surface-2)',
+                  color: 'var(--color-muted)',
+                  border: '0.5px solid var(--color-border)',
+                }}
+              >
                 {error}
               </div>
             )}

@@ -418,11 +418,19 @@ export default function KycPage() {
                   <div className="rounded-xl p-4" style={{ background: 'var(--color-surface-2)' }}>
                     <div className="text-xs uppercase tracking-[0.2em] mb-3" style={{ color: 'var(--color-muted)' }}>AML risk factors</div>
                     <div className="flex flex-wrap gap-2">
-                      {entry.aml.factors.map((factor) => (
-                        <span key={factor} className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
-                          {factor}
-                        </span>
-                      ))}
+      {entry.aml.factors.map((factor) => (
+        <span
+          key={factor}
+          className="text-xs px-2.5 py-1 rounded-full"
+          style={{
+            background: 'var(--color-surface-2)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--foreground)',
+          }}
+        >
+          {factor}
+        </span>
+      ))}
                     </div>
                   </div>
 
@@ -430,10 +438,18 @@ export default function KycPage() {
                     <summary className="cursor-pointer font-semibold">Full compliance audit trail</summary>
                     <div className="mt-4 space-y-3">
                       {entry.auditTrail.map((event) => (
-                        <div key={event.id} className="rounded-lg p-3" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
+                        <div
+                          key={event.id}
+                          className="rounded-lg p-3"
+                          style={{
+                            background: 'var(--color-surface-2)',
+                            border: '1px solid var(--color-border)',
+                            color: 'var(--foreground)',
+                          }}
+                        >
                           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <div>
-                              <div className="font-semibold">{event.label.replace(/_/g, ' ')}</div>
+                              <div className="font-semibold" style={{ color: 'var(--foreground)' }}>{event.label.replace(/_/g, ' ')}</div>
                               <div className="text-xs" style={{ color: 'var(--color-muted)' }}>{event.type.replace(/_/g, ' ')} · {formatDate(event.createdAt)}</div>
                             </div>
                             <span
@@ -492,7 +508,14 @@ function SummaryCard({
 function CheckTile({ label, check }: { label: string; check: CheckSummary }) {
   const tone = statusStyle(check.status);
   return (
-    <div className="rounded-lg p-3" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
+    <div
+      className="rounded-lg p-3"
+      style={{
+        background: 'var(--color-surface-2)',
+        border: '1px solid var(--color-border)',
+        color: 'var(--foreground)',
+      }}
+    >
       <div className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--color-muted)' }}>{label}</div>
       <span className="inline-flex text-xs font-semibold px-2.5 py-1 rounded-full mb-2" style={{ background: tone.bg, color: tone.fg }}>
         {formatStatus(check.status)}
@@ -515,12 +538,19 @@ function ScreeningTile({
 }) {
   const tone = statusStyle(summary.status);
   return (
-    <div className="rounded-lg p-3" style={{ background: '#fff', border: '1px solid var(--color-border)' }}>
+    <div
+      className="rounded-lg p-3"
+      style={{
+        background: 'var(--color-surface-2)',
+        border: '1px solid var(--color-border)',
+        color: 'var(--foreground)',
+      }}
+    >
       <div className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--color-muted)' }}>{label}</div>
       <span className="inline-flex text-xs font-semibold px-2.5 py-1 rounded-full mb-2" style={{ background: tone.bg, color: tone.fg }}>
         {formatStatus(summary.status)}
       </span>
-      <div className="text-sm font-semibold">{summary.result}</div>
+      <div className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{summary.result}</div>
       <div className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>{summary.provider}</div>
       <div className="text-xs mt-2" style={{ color: 'var(--color-muted)' }}>{footer}</div>
     </div>
