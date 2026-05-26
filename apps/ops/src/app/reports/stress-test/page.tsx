@@ -34,7 +34,7 @@ function SummaryCard({
   return (
     <div
       className="rounded-lg p-4 flex-1"
-      style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+      style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
     >
       <p className="text-xs font-medium uppercase tracking-[0.18em] mb-2" style={{ color: 'var(--color-muted)' }}>
         {label}
@@ -75,6 +75,19 @@ export default function StressTestPage() {
 
   useEffect(() => {
     if (!roleChecked) return;
+
+    if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo') {
+      setLoans([
+        { id: '1', loanNumber: 'LN-001', principal: 4500000, outstandingBalance: 3800000, apr: 0.18, termMonths: 24, remainingMonths: 18, dpd: 0, productType: 'personal', status: 'active', borrower: { monthlyIncome: 15000, monthlyExpenses: 8000 } },
+        { id: '2', loanNumber: 'LN-002', principal: 12000000, outstandingBalance: 11400000, apr: 0.12, termMonths: 60, remainingMonths: 58, dpd: 0, productType: 'business', status: 'active', borrower: { monthlyIncome: 45000, monthlyExpenses: 22000 } },
+        { id: '3', loanNumber: 'LN-003', principal: 2500000, outstandingBalance: 2200000, apr: 0.18, termMonths: 24, remainingMonths: 20, dpd: 0, productType: 'personal', status: 'active', borrower: { monthlyIncome: 12000, monthlyExpenses: 7000 } },
+        { id: '4', loanNumber: 'LN-004', principal: 800000, outstandingBalance: 650000, apr: 0.36, termMonths: 12, remainingMonths: 8, dpd: 14, productType: 'short_term', status: 'active', borrower: { monthlyIncome: 8000, monthlyExpenses: 5000 } },
+        { id: '5', loanNumber: 'LN-005', principal: 5000000, outstandingBalance: 4800000, apr: 0.24, termMonths: 36, remainingMonths: 35, dpd: 91, productType: 'personal', status: 'defaulted', borrower: { monthlyIncome: 18000, monthlyExpenses: 12000 } },
+        { id: '6', loanNumber: 'LN-006', principal: 7500000, outstandingBalance: 5200000, apr: 0.18, termMonths: 48, remainingMonths: 32, dpd: 32, productType: 'business', status: 'active', borrower: { monthlyIncome: 32000, monthlyExpenses: 18000 } },
+      ] as unknown as LoanItem[]);
+      setLoading(false);
+      return;
+    }
 
     const controller = new AbortController();
     setLoading(true);
@@ -128,7 +141,10 @@ export default function StressTestPage() {
   if (!roleChecked) return null;
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4">
+    <div
+      className="max-w-6xl mx-auto py-8 px-4"
+      style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh' }}
+    >
       {/* Disclaimer */}
       <div className="mb-6 p-4 rounded-lg" style={{ background: '#FFFBEB', border: '1px solid #FDE047' }}>
         <p className="text-xs text-[#92400E]">
@@ -143,7 +159,7 @@ export default function StressTestPage() {
         <div className="lg:w-[35%] flex flex-col gap-4">
           <div
             className="rounded-lg p-6"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
           >
             <h2 className="text-lg font-semibold mb-4">Scenario Parameters</h2>
 
@@ -266,7 +282,7 @@ export default function StressTestPage() {
               {/* DPD Distribution Chart */}
               <div
                 className="rounded-lg p-6"
-                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
               >
                 <h3 className="text-lg font-semibold mb-4">DPD Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>

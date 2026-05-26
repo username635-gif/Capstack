@@ -43,7 +43,10 @@ function ComplianceNotice() {
         {open ? "Hide compliance notice" : "Show compliance notice"}
       </button>
       {open && (
-        <div className="bg-[#F1EFE8] border border-[#3B6D11] rounded p-3 text-xs text-[#3B6D11]">
+        <div
+          className="rounded p-3 text-xs text-[#3B6D11]"
+          style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
+        >
           This report is produced to support fair lending obligations under the National Credit Act and the Promotion of Equality and Prevention of Unfair Discrimination Act. Data should be reviewed quarterly.
         </div>
       )}
@@ -59,6 +62,37 @@ export default function FairnessReportPage() {
   const [data, setData] = useState<FairnessReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const DEMO_REPORT: FairnessReport = {
+    approvalRateByProvince: [
+      { province: "Gauteng", totalApplications: 450, approved: 310, approvalRate: 68.9, deviationFromMean: 2.1 },
+      { province: "Western Cape", totalApplications: 280, approved: 201, approvalRate: 71.8, deviationFromMean: 5.0 },
+      { province: "KwaZulu-Natal", totalApplications: 310, approved: 198, approvalRate: 63.9, deviationFromMean: -2.9 },
+      { province: "Eastern Cape", totalApplications: 180, approved: 108, approvalRate: 60.0, deviationFromMean: -6.8 },
+      { province: "Limpopo", totalApplications: 120, approved: 78, approvalRate: 65.0, deviationFromMean: -1.8 },
+      { province: "Mpumalanga", totalApplications: 95, approved: 64, approvalRate: 67.4, deviationFromMean: 0.6 },
+    ],
+    approvalRateByIncomeBand: [
+      { band: "under_5k", label: "Under R5K", totalApplications: 210, approved: 98, approvalRate: 46.7, defaultRate: 8.2 },
+      { band: "5k_15k", label: "R5K–R15K", totalApplications: 480, approved: 312, approvalRate: 65.0, defaultRate: 4.1 },
+      { band: "15k_30k", label: "R15K–R30K", totalApplications: 520, approved: 390, approvalRate: 75.0, defaultRate: 2.8 },
+      { band: "over_30k", label: "Over R30K", totalApplications: 225, approved: 180, approvalRate: 80.0, defaultRate: 1.2 },
+    ],
+    scoreBandDistribution: [
+      { band: "A", count: 180, approvalRate: 95.0, predictedDefaultRate: 1.2, actualDefaultRate: 1.0 },
+      { band: "B", count: 320, approvalRate: 82.0, predictedDefaultRate: 3.5, actualDefaultRate: 3.8 },
+      { band: "C", count: 410, approvalRate: 65.0, predictedDefaultRate: 6.8, actualDefaultRate: 7.1 },
+      { band: "D", count: 280, approvalRate: 38.0, predictedDefaultRate: 12.0, actualDefaultRate: 11.4 },
+      { band: "E", count: 145, approvalRate: 12.0, predictedDefaultRate: 22.0, actualDefaultRate: 24.1 },
+    ],
+    overrideAnalysisByAdviser: [
+      { adviserId: "1", adviserName: "T. Mokoena", totalDecisions: 145, overrideCount: 18, overrideRate: 12.4, overrideApprovalRate: 72.0, overrideDefaultRate: 4.2, flagged: false },
+      { adviserId: "2", adviserName: "S. Dlamini", totalDecisions: 98, overrideCount: 24, overrideRate: 24.5, overrideApprovalRate: 68.0, overrideDefaultRate: 6.8, flagged: true },
+      { adviserId: "3", adviserName: "A. Pieterse", totalDecisions: 112, overrideCount: 14, overrideRate: 12.5, overrideApprovalRate: 78.0, overrideDefaultRate: 3.1, flagged: false },
+    ],
+    dateRange: { from: "2026-02-01", to: "2026-05-26" },
+    generatedAt: new Date().toISOString(),
+  };
+
   useEffect(() => {
     const session = getSession();
     if (!session || !ALLOWED_ROLES.includes(session.role)) {
@@ -70,6 +104,13 @@ export default function FairnessReportPage() {
 
   useEffect(() => {
     if (!roleChecked) return;
+
+    if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === "demo") {
+      setData(DEMO_REPORT);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     setLoading(true);
     setError(null);
@@ -96,7 +137,10 @@ export default function FairnessReportPage() {
   if (!roleChecked) return null;
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div
+      className="max-w-3xl mx-auto py-8 px-4"
+      style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh' }}
+    >
       <ComplianceNotice />
       <h1 className="text-2xl font-bold mb-6">Fairness Report</h1>
       <div className="flex gap-2 mb-8">
@@ -104,11 +148,13 @@ export default function FairnessReportPage() {
           <button
             key={p.value}
             type="button"
-            className={`px-4 py-2 rounded-full border text-sm font-medium ${
-              period === p.value
-                ? "bg-[#3B6D11] text-white"
-                : "bg-white text-[#3B6D11] border-[#3B6D11]"
-            }`}
+            className="px-4 py-2 rounded-full text-sm font-medium"
+            style={{
+              background: period === p.value ? "var(--color-primary)" : "var(--color-surface)",
+              color: period === p.value ? "var(--color-primary-fg)" : "var(--foreground)",
+              border: "0.5px solid var(--color-border)",
+              cursor: "pointer",
+            }}
             onClick={() => setPeriod(p.value)}
           >
             {p.label}

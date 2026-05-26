@@ -94,11 +94,20 @@ const DEMO_DASHBOARD: DashboardPayload = {
 };
 
 export default function OpsHome() {
-  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
+
+  const [dashboard, setDashboard] = useState<DashboardPayload | null>(demoMode ? DEMO_DASHBOARD : null);
+  const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useEffectEvent(async () => {
+    if (demoMode) {
+      setDashboard(DEMO_DASHBOARD);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

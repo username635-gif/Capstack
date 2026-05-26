@@ -41,7 +41,107 @@ function formatLabel(value: string) {
   return value.replace(/_/g, ' ');
 }
 
-function LoansPageInner() {
+function LoansPageInnerDemo() {
+  const demoLoans = [
+    {
+      id: '1',
+      loanNumber: 'LN-001',
+      borrower: { name: 'Jane Doe' },
+      product: { name: 'Personal Loan' },
+      outstandingTotal: 3800000,
+      aprBps: 1800,
+      daysPastDue: 0,
+      status: 'ACTIVE',
+      disbursedAt: '2026-04-01',
+    },
+    {
+      id: '2',
+      loanNumber: 'LN-002',
+      borrower: { name: 'John Smith' },
+      product: { name: 'Business Loan' },
+      outstandingTotal: 11400000,
+      aprBps: 1200,
+      daysPastDue: 0,
+      status: 'ACTIVE',
+      disbursedAt: '2026-03-15',
+    },
+    {
+      id: '3',
+      loanNumber: 'LN-003',
+      borrower: { name: 'Sam Lee' },
+      product: { name: 'Vehicle Finance' },
+      outstandingTotal: 2200000,
+      aprBps: 1800,
+      daysPastDue: 0,
+      status: 'ACTIVE',
+      disbursedAt: '2026-02-22',
+    },
+  ];
+
+  return (
+    <OpsLayout title="Loans">
+      <div className="grid gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Active loans</p>
+          <p className="mt-3 text-3xl font-semibold">3</p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Outstanding exposure</p>
+          <p className="mt-3 text-3xl font-semibold">{formatMoney(demoLoans.reduce((s, l) => s + l.outstandingTotal, 0))}</p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">At-risk loans</p>
+          <p className="mt-3 text-3xl font-semibold">0</p>
+          <p className="text-sm text-[var(--color-muted)]">R 0</p>
+        </div>
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Defaulted loans</p>
+          <p className="mt-3 text-3xl font-semibold">0</p>
+          <p className="text-sm text-[var(--color-muted)]">R 0</p>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <p className="text-sm text-[var(--color-muted)]">Demo mode: showing sample loans.</p>
+      </div>
+
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+        <table className="min-w-full text-left text-sm">
+          <thead className="bg-[var(--color-surface-2)] text-[var(--color-muted)]">
+            <tr>
+              {['Loan #', 'Borrower', 'Product', 'Outstanding', 'APR', 'DPD', 'Status', 'Disbursed'].map((heading) => (
+                <th key={heading} className="px-4 py-3 font-semibold uppercase tracking-wide">{heading}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {demoLoans.map((loan) => (
+              <tr key={loan.id}>
+                <td className="px-4 py-4 font-mono text-xs">{loan.loanNumber}</td>
+                <td className="px-4 py-4 font-medium">{loan.borrower.name}</td>
+                <td className="px-4 py-4">{loan.product.name}</td>
+                <td className="px-4 py-4">{formatMoney(loan.outstandingTotal)}</td>
+                <td className="px-4 py-4">{(loan.aprBps / 100).toFixed(1)}%</td>
+                <td className="px-4 py-4">{loan.daysPastDue}d</td>
+                <td className="px-4 py-4">
+                  <span
+                    className="rounded-full px-2 py-1 text-[10px] font-semibold"
+                    style={{ background: 'var(--color-surface-2)', color: STATUS_COLORS[loan.status] ?? 'var(--color-muted)' }}
+                  >
+                    {formatLabel(loan.status)}
+                  </span>
+                </td>
+                <td className="px-4 py-4">{formatDate(loan.disbursedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </OpsLayout>
+  );
+}
+
+function LoansPageInnerLive() {
   const {
     filters,
     setStatus,
@@ -260,9 +360,13 @@ function LoansPageInner() {
 }
 
 export default function LoansPage() {
+  const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
+
   return (
-    <Suspense fallback={<OpsLayout title="Loans"><div className="text-sm text-[var(--color-muted)]">Loading…</div></OpsLayout>}>
-      <LoansPageInner />
+    <Suspense
+      fallback={<OpsLayout title="Loans"><div className="text-sm text-[var(--color-muted)]">Loading…</div></OpsLayout>}
+    >
+      {demoMode ? <LoansPageInnerDemo /> : <LoansPageInnerLive />}
     </Suspense>
   );
 }

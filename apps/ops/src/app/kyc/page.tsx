@@ -69,6 +69,79 @@ type CompliancePayload = {
   cases: ComplianceCase[];
 };
 
+const DEMO_COMPLIANCE_PAYLOAD: CompliancePayload = {
+  generatedAt: '2026-05-26T09:30:00Z',
+  summary: {
+    totalBorrowers: 42,
+    highRiskBorrowers: 6,
+    pendingFicaDocs: 9,
+    sanctionsHits: 2,
+    openAlerts: 5,
+  },
+  cases: [
+    {
+      borrowerId: 'c1',
+      borrower: {
+        name: 'Jane Doe',
+        email: 'jane.doe@email.com',
+        phone: '+27100000000',
+        idNumber: '8201011234089',
+      },
+      ficaDocuments: {
+        idVerification: { status: 'COMPLETE', provider: 'SmileID', outcome: 'Verified', checkedAt: '2026-05-25T10:00:00Z' },
+        proofOfAddress: { status: 'IN_PROGRESS', provider: 'DocumentHub', outcome: null, checkedAt: '2026-05-24T08:45:00Z' },
+        liveness: { status: 'COMPLETE', provider: 'Onfido', outcome: 'Passed', checkedAt: '2026-05-25T10:05:00Z' },
+      },
+      sanctions: {
+        sanctions: { status: 'PENDING', provider: 'SanctionsAPI', result: 'No hit', checkedAt: '2026-05-25T12:30:00Z' },
+        pep: { status: 'PENDING', provider: 'PEPRegistry', result: 'No match', checkedAt: '2026-05-25T12:30:00Z' },
+        ofacStatus: 'CLEAR',
+        unStatus: 'CLEAR',
+      },
+      aml: {
+        riskRating: 'LOW',
+        factors: ['Stable employment', 'Consistent address', 'No prior disputes'],
+        openAlertCount: 1,
+        filedSarCount: 0,
+      },
+      auditTrail: [
+        { id: 'a1', type: 'SCREENING', label: 'OFAC', status: 'COMPLETE', createdAt: '2026-05-25T12:30:00Z', details: 'Result cleared' },
+      ],
+      lastUpdatedAt: '2026-05-25T12:31:00Z',
+    },
+    {
+      borrowerId: 'c2',
+      borrower: {
+        name: 'John Smith',
+        email: 'john.smith@email.com',
+        phone: '+27110000000',
+        idNumber: '7505053456789',
+      },
+      ficaDocuments: {
+        idVerification: { status: 'FAILED', provider: 'IDVerify', outcome: 'Mismatch', checkedAt: '2026-05-23T09:12:00Z' },
+        proofOfAddress: { status: 'COMPLETE', provider: 'DocumentHub', outcome: 'Accepted', checkedAt: '2026-05-23T09:25:00Z' },
+        liveness: { status: 'MANUAL_REVIEW', provider: 'Onfido', outcome: null, checkedAt: '2026-05-23T09:40:00Z' },
+      },
+      sanctions: {
+        sanctions: { status: 'MANUAL_REVIEW', provider: 'SanctionsAPI', result: 'Investigate', checkedAt: '2026-05-24T11:20:00Z' },
+        pep: { status: 'IN_PROGRESS', provider: 'PEPRegistry', result: 'Under review', checkedAt: '2026-05-24T11:20:00Z' },
+        ofacStatus: 'REVIEW',
+        unStatus: 'REVIEW',
+      },
+      aml: {
+        riskRating: 'HIGH',
+        factors: ['Cash-intensive business', 'Recent address change', 'Adverse media keywords'],
+        openAlertCount: 4,
+        filedSarCount: 1,
+      },
+      auditTrail: [
+        { id: 'a2', type: 'AML', label: 'Adverse media review', status: 'IN_PROGRESS', createdAt: '2026-05-24T11:20:00Z', details: 'Additional evidence requested' },
+      ],
+      lastUpdatedAt: '2026-05-24T11:21:00Z',
+    },
+  ],
+};
+
 const STATUS_STYLES: Record<string, { bg: string; fg: string }> = {
   PENDING: { bg: 'var(--badge-pending-bg)', fg: 'var(--badge-pending-fg)' },
   IN_PROGRESS: { bg: 'var(--badge-awaiting-bg)', fg: 'var(--badge-awaiting-fg)' },
@@ -97,14 +170,25 @@ function statusStyle(status: string) {
 }
 
 export default function KycPage() {
-  const [payload, setPayload] = useState<CompliancePayload | null>(null);
+  const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
+
+  const [payload, setPayload] = useState<CompliancePayload | null>(
+    demoMode ? DEMO_COMPLIANCE_PAYLOAD : null,
+  );
   const [riskFilter, setRiskFilter] = useState<ComplianceRisk>('ALL');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
   const loadCompliance = useEffectEvent(async () => {
+    if (demoMode) {
+      setPayload(DEMO_COMPLIANCE_PAYLOAD);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

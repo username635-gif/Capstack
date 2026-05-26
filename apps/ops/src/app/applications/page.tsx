@@ -230,7 +230,8 @@ export default function ApplicationsPage() {
 
   const session = getSession();
 
-  const enabled = Boolean(session);
+  const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
+  const enabled = !demoMode && Boolean(session);
 
   // Live data: when reachable return it, otherwise fallback to DEMO_APPLICATIONS.
   const { data, isLoading } = useQuery<ApplicationsResponse>({
@@ -251,7 +252,9 @@ export default function ApplicationsPage() {
     placeholderData: keepPreviousData,
   });
 
-  const applications = (data?.data && data.data.length > 0 ? data.data : DEMO_APPLICATIONS) as ApiApplication[];
+  const applications = (demoMode
+    ? DEMO_APPLICATIONS
+    : (data?.data && data.data.length > 0 ? data.data : DEMO_APPLICATIONS)) as ApiApplication[];
 
   const columns = useMemo<ColumnDef<ApiApplication>[]>(
     () => [

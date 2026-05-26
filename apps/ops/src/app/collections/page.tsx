@@ -190,7 +190,136 @@ function resolveDraft(loan: CollectionLoan, current?: CollectionDraft): Collecti
   };
 }
 
+const DEMO_QUEUE: CollectionLoan[] = [
+  {
+    id: 'cl1',
+    loanNumber: 'LN-CC-001',
+    status: 'DELINQUENT',
+    daysPastDue: 14,
+    delinquencyState: 'CONTACT_CYCLE',
+    outstandingPrincipal: 650000,
+    outstandingInterest: 42000,
+    outstandingFees: 8000,
+    outstandingTotalCents: 700000,
+    borrower: {
+      id: 'b1',
+      name: 'Jane Doe',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane.doe@email.com',
+      phone: '+27100000000',
+      riskRating: 'LOW',
+      blacklistFlag: false,
+    },
+    latestCollectionEvent: {
+      type: 'SMS_REMINDER',
+      channel: 'SMS',
+      notes: 'Reminder sent',
+      createdAt: '2026-05-25T10:10:00Z',
+    },
+    ai: {
+      recommendedAction: 'PROMISE_TO_PAY',
+      priority: 'HIGH',
+      message: 'Likely to cure with structured promise.',
+      nextBestChannel: 'WHATSAPP',
+      defaultRiskPct: 18,
+      predictedRecoveryPct: 72,
+    },
+    workflow: {
+      requiresImmediateAction: false,
+      lastContactAt: '2026-05-24T09:00:00Z',
+      lastContactType: 'SMS',
+      lastContactChannel: 'SMS',
+      daysSinceLastContact: 1,
+      contactAttempts: 3,
+      noteCount: 2,
+      brokenPromiseCount: 0,
+      legalEscalations: 0,
+      restructureOffers: 0,
+      nextActionDueAt: '2026-05-26T09:00:00Z',
+      promiseToPay: {
+        status: 'OPEN',
+        amountCents: 250000,
+        dueDate: '2026-05-30',
+        loggedAt: '2026-05-24T12:00:00Z',
+      },
+    },
+    events: [
+      { id: 'e1', type: 'SMS_REMINDER', channel: 'SMS', outcome: 'SENT', createdAt: '2026-05-25T10:10:00Z' },
+      { id: 'e2', type: 'CALL', channel: 'CALL', outcome: 'NO_ANSWER', createdAt: '2026-05-24T09:20:00Z' },
+    ],
+  },
+  {
+    id: 'cl2',
+    loanNumber: 'LN-CC-002',
+    status: 'DELINQUENT',
+    daysPastDue: 95,
+    delinquencyState: 'ESCALATION_PENDING',
+    outstandingPrincipal: 5200000,
+    outstandingInterest: 310000,
+    outstandingFees: 120000,
+    outstandingTotalCents: 5530000,
+    borrower: {
+      id: 'b2',
+      name: 'John Smith',
+      firstName: 'John',
+      lastName: 'Smith',
+      email: 'john.smith@email.com',
+      phone: '+27110000000',
+      riskRating: 'MEDIUM',
+      blacklistFlag: false,
+    },
+    latestCollectionEvent: {
+      type: 'CALL',
+      channel: 'CALL',
+      notes: 'Spoke with borrower, asked for restructure details',
+      createdAt: '2026-05-20T15:00:00Z',
+    },
+    ai: {
+      recommendedAction: 'RESTRUCTURE_OFFER',
+      priority: 'CRITICAL',
+      message: 'Escalation likely needed; offer restructuring to prevent legal.',
+      nextBestChannel: 'CALL',
+      defaultRiskPct: 44,
+      predictedRecoveryPct: 58,
+    },
+    workflow: {
+      requiresImmediateAction: true,
+      lastContactAt: '2026-05-20T15:00:00Z',
+      lastContactType: 'CALL',
+      lastContactChannel: 'CALL',
+      daysSinceLastContact: 5,
+      contactAttempts: 7,
+      noteCount: 5,
+      brokenPromiseCount: 1,
+      legalEscalations: 0,
+      restructureOffers: 1,
+      nextActionDueAt: '2026-05-27T12:00:00Z',
+      promiseToPay: null,
+    },
+    events: [
+      { id: 'e3', type: 'EMAIL_REMINDER', channel: 'EMAIL', outcome: 'SENT', createdAt: '2026-05-22T11:00:00Z' },
+      { id: 'e4', type: 'PROMISE_TO_PAY', channel: 'CALL', outcome: 'BROKEN', createdAt: '2026-05-18T14:00:00Z' },
+    ],
+  },
+];
+
+const DEMO_SUMMARY: CollectionsSummary = {
+  totalLoans: 2,
+  totalOutstandingCents: 6230000,
+  immediateActionCount: 1,
+  promiseToPayOpenCount: 1,
+  brokenPromiseCount: 1,
+  legalQueueCount: 0,
+  restructureQueueCount: 1,
+  avgDaysSinceLastContact: 3.0,
+  priorityCounts: { LOW: 0, MEDIUM: 0, HIGH: 1, CRITICAL: 1 },
+  stageCounts: { ALL: 2 },
+};
+
 export default function CollectionsPage() {
+  const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
+
   const [bucket, setBucket] = useState<ArrearsBucket>('ALL');
   const [queue, setQueue] = useState<CollectionLoan[]>([]);
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
@@ -202,6 +331,13 @@ export default function CollectionsPage() {
   const loadQueue = useEffectEvent(async () => {
     setLoading(true);
     setError(null);
+
+    if (demoMode) {
+      setQueue(DEMO_QUEUE);
+      setSummary(DEMO_SUMMARY);
+      setLoading(false);
+      return;
+    }
 
     try {
       const headers = await buildOpsApiHeaders();
