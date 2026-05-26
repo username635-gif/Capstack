@@ -195,9 +195,9 @@ export default function OpsLayout({
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen flex"
       style={{
-        background: `linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)`,
+        background: 'var(--background)',
         color: 'var(--foreground)',
       }}
     >
@@ -292,7 +292,15 @@ export default function OpsLayout({
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div
+        className="flex flex-col overflow-hidden"
+        style={{
+          background: 'var(--background)',
+          color: 'var(--foreground)',
+          flex: 1,
+          minHeight: '100vh',
+        }}
+      >
         <header
           className="h-16 flex items-center justify-between px-8"
           style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
