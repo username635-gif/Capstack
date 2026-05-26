@@ -45,3 +45,12 @@ Run:
 pnpm -C apps/partner build
 ```
 
+---
+
+## UI Theming Notes (Light/Dark)
+
+Partner UI theming uses CSS design tokens defined in `src/app/globals.css`.
+
+Dark mode overrides are defined under `[data-theme="dark"]`.
+
+

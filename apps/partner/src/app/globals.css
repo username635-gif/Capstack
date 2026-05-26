@@ -6,7 +6,6 @@
   --foreground: rgb(14, 13, 12);
   --color-surface: rgb(249, 248, 246);
   --color-surface-2: rgba(217, 217, 217, 0.2);
-
   --color-primary: rgb(14, 13, 12);
   --color-primary-fg: rgb(249, 248, 246);
   --color-secondary: rgb(32, 32, 31);
@@ -37,6 +36,7 @@
 
   --radius-card: 12px;
   --radius-pill: 9999px;
+
   --font-ui: Inter, Neuemontreal, Arial, sans-serif;
   --font-display: "Dentonvariabletest Vf", "Times New Roman", sans-serif;
   --font-editorial: "Times New Roman";
@@ -46,37 +46,41 @@
   --background: rgb(0, 0, 0);
   --foreground: rgb(249, 248, 246);
   --color-surface: rgb(14, 13, 12);
-  --color-surface-2: rgba(217, 217, 217, 0.2);
+  --color-surface-2: rgba(217, 217, 217, 0.08);
   --color-primary: rgb(249, 248, 246);
   --color-primary-fg: rgb(14, 13, 12);
   --color-secondary: rgb(249, 248, 246);
   --color-secondary-fg: rgb(14, 13, 12);
   --color-accent: rgb(249, 248, 246);
   --color-danger: rgb(249, 248, 246);
-  --color-muted: rgba(249, 248, 246, 0.65);
-  --color-border: rgba(217, 217, 217, 0.2);
-  --color-glow: rgba(217, 217, 217, 0.2);
+  --color-muted: rgba(249, 248, 246, 0.55);
+  --color-border: rgba(217, 217, 217, 0.12);
+  --color-glow: rgba(217, 217, 217, 0.12);
   --color-clear: rgba(255, 255, 255, 0);
-  --color-progress-track: rgba(217, 217, 217, 0.2);
+  --color-progress-track: rgba(217, 217, 217, 0.12);
   --color-progress-fill: rgb(249, 248, 246);
-  --badge-approved-bg: rgba(217, 217, 217, 0.2);
+
+  --badge-approved-bg: rgba(217, 217, 217, 0.12);
   --badge-approved-fg: rgb(249, 248, 246);
-  --badge-pending-bg: rgba(217, 217, 217, 0.2);
+  --badge-pending-bg: rgba(217, 217, 217, 0.12);
   --badge-pending-fg: rgb(249, 248, 246);
-  --badge-overdue-bg: rgba(217, 217, 217, 0.2);
+  --badge-overdue-bg: rgba(217, 217, 217, 0.12);
   --badge-overdue-fg: rgb(249, 248, 246);
-  --badge-declined-bg: rgba(217, 217, 217, 0.2);
+  --badge-declined-bg: rgba(217, 217, 217, 0.12);
   --badge-declined-fg: rgb(249, 248, 246);
-  --badge-active-bg: rgba(217, 217, 217, 0.2);
+  --badge-active-bg: rgba(217, 217, 217, 0.12);
   --badge-active-fg: rgb(249, 248, 246);
-  --badge-awaiting-bg: rgba(217, 217, 217, 0.2);
+  --badge-awaiting-bg: rgba(217, 217, 217, 0.12);
   --badge-awaiting-fg: rgb(249, 248, 246);
+
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   --radius-sm:  2px;
   --radius:     4px;
   --radius-md:  5px;
@@ -164,3 +168,4 @@ button:focus-visible {
 :where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-secondary)"] {
   color: var(--color-secondary-fg) !important;
 }
+

@@ -166,3 +166,22 @@ Prisma client configured with the Neon serverless adapter (`@prisma/adapter-neon
 ## Contributing
 
 This is a private monorepo. Please follow the notes in each package's source files before making changes. Run `pnpm build` before committing to verify there are no TypeScript errors.
+
+---
+
+## UI Theming Notes (Light/Dark)
+
+Capstack UI theming is driven by CSS design tokens defined per app in:
+
+- `apps/api/src/app/globals.css`
+- `apps/borrower/src/app/globals.css`
+- `apps/ops/src/app/globals.css`
+- `apps/partner/src/app/globals.css`
+
+Dark mode uses `[data-theme="dark"]` token blocks.
+
+### Token sync scope (Tasks 1)
+
+- Dark mode badge tokens and dark surface/border tokens were added/synced across the 4 apps.
+- `apps/ops` and `apps/borrower` dark border token is `rgba(217, 217, 217, 0.12)`.
+

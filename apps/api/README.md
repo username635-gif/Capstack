@@ -47,3 +47,12 @@ pnpm -C apps/api build
 
 This will typecheck + run Next.js production build checks.
 
+---
+
+## UI Theming Notes (Light/Dark)
+
+The API app also ships shared UI components/styles (for routes like ops downloads and tokenized UI surfaces).
+
+Design tokens live in `src/app/globals.css`, including light-mode `:root` and dark-mode `[data-theme="dark"]` variables.
+
+

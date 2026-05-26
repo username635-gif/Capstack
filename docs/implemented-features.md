@@ -360,3 +360,20 @@ Start here:
 8. [apps/workers/src/index.ts](../apps/workers/src/index.ts)
 
 That set gives you the core lending loop, operations surface, partner intake path, and background processing entry point.
+
+## UI Token/Theming Coverage (Light/Dark) 
+
+Capstack’s Light/Dark theme is driven by per-app CSS variables stored in:
+
+- `apps/api/src/app/globals.css`
+- `apps/borrower/src/app/globals.css`
+- `apps/ops/src/app/globals.css`
+- `apps/partner/src/app/globals.css`
+
+Dark mode is applied via `[data-theme="dark"]` selectors.
+
+### Important token sync (Task 1)
+
+- Badge background/foreground tokens and progress/bar tokens were synced across the 4 apps.
+- Ops/Borrower dark border and secondary surface tokens are aligned to the expected RGBA values.
+

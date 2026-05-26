@@ -45,3 +45,15 @@ Run:
 pnpm -C apps/borrower build
 ```
 
+---
+
+## UI Theming Notes (Light/Dark)
+
+Borrower UI theming is tokenized.
+
+- Light mode uses `:root` variables.
+- Dark mode uses `[data-theme="dark"]` variables.
+
+See `src/app/globals.css` for the authoritative token definitions.
+
+

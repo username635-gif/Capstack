@@ -51,3 +51,16 @@ Run:
 pnpm -C apps/ops build
 ```
 
+---
+
+## UI Theming Notes (Light/Dark)
+
+Ops console UI uses CSS design tokens stored in `src/app/globals.css`.
+
+Dark mode token overrides are defined under `[data-theme="dark"]`.
+
+Key token alignment:
+- `--color-border` in dark mode is `rgba(217, 217, 217, 0.12)`.
+- `--color-surface-2` in dark mode is `rgba(217, 217, 217, 0.08)`.
+
+
