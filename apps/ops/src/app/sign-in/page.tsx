@@ -13,52 +13,11 @@ const AUTH_MODE_LABEL = getOpsAuthModeLabel(AUTH_CONFIG.mode);
 const SSO_PROVIDER_ORDER: OpsSsoProvider[] = ['google', 'microsoft'];
 
 
-function createParticle(width: number, height: number) {
-  return {
-    x: Math.random() * width,
-    y: Math.random() * height,
-    vx: (Math.random() * 0.6) - 0.3,
-    vy: (Math.random() * 0.6) - 0.3,
-    radius: 1 + (Math.random() * 1.5),
-  };
-}
-
-function getThemeMode(): 'light' | 'dark' {
-  if (typeof document === 'undefined') {
-    return 'light';
-  }
-
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-}
-
-function getCanvasPalette(mode: 'light' | 'dark') {
-  if (mode === 'dark') {
-    return {
-      nodeColor: 'rgba(255, 255, 255, 0.30)',
-      lineRgb: '255, 255, 255',
-      lineMaxAlpha: 0.15,
-      mouseRgb: '92, 219, 122',
-      mouseLineMaxAlpha: 0.2,
-      glowInner: 'rgba(92, 219, 122, 0.07)',
-    };
-  }
-
-  return {
-    nodeColor: 'rgba(0, 0, 0, 0.26)',
-    lineRgb: '0, 0, 0',
-    lineMaxAlpha: 0.13,
-    mouseRgb: '0, 0, 0',
-    mouseLineMaxAlpha: 0.24,
-    glowInner: 'rgba(0, 0, 0, 0.05)',
-  };
-}
-
 export default function StaffSignIn() {
   const router   = useRouter();
   const [email,  setEmail]   = useState('');
   const [error,  setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -71,16 +30,6 @@ export default function StaffSignIn() {
     setError(getReasonMessage(reason, provider));
   }, []);
 
-  useEffect(() => {
-    const syncThemeMode = () => setThemeMode(getThemeMode());
-    syncThemeMode();
-
-    const observer = new MutationObserver(syncThemeMode);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-
-    return () => observer.disconnect();
-  }, []);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
@@ -89,14 +38,12 @@ export default function StaffSignIn() {
 
     // DEMO MODE: Instant sign-in, no artificial delay
     if (AUTH_CONFIG.mode === 'demo') {
-      // Simulate a session object for demo mode.
-      // NOTE: OpsSession does not include a `mode` field; keep it strictly type-safe.
       setSession({
-        id: 'ops-demo-1',
-        email,
-        name: 'Demo Admin',
+        id: 'demo-staff-001',
+        email: email.trim().toLowerCase(),
+        name: 'Demo Advisor',
         role: 'ADMIN',
-        lender: { id: 'lender-demo', name: 'Capstack Demo Lender' },
+        lender: { id: 'demo-lender-001', name: 'Capstack Demo' },
         type: 'staff',
       });
 
@@ -130,13 +77,8 @@ export default function StaffSignIn() {
 
   return (
     <div
-
       className="min-h-screen flex items-center justify-center px-4 relative"
-      style={{
-        background: themeMode === 'dark'
-          ? 'linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(14, 13, 12, 0.98) 100%), rgb(0, 0, 0)'
-          : 'linear-gradient(180deg, rgba(249, 248, 246, 0.98) 0%, rgba(249, 248, 246, 0.94) 100%), rgb(249, 248, 246)',
-      }}
+      style={{ background: 'var(--background)' }}
     >
       <div
         className="w-full max-w-md rounded-2xl p-9 relative z-10"

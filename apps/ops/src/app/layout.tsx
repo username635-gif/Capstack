@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from './_components/ThemeProvider';
 import QueryProvider from './_components/QueryProvider';
-import Topbar from './_components/Topbar';
 
 export const metadata: Metadata = {
   title: "Capstack Ops Console",
@@ -16,17 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full">
         <QueryProvider>
           <ThemeProvider>
-            <div className="flex">
-              <div className="flex-1 min-h-screen">
-                <Topbar />
-                <main className="p-6" style={{ marginLeft: 0 }}>
-                  {children}
-                </main>
-              </div>
-            </div>
+            {children}
           </ThemeProvider>
         </QueryProvider>
       </body>

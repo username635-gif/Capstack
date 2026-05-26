@@ -161,15 +161,16 @@ export default function HeroSection() {
     <section
       ref={wrapperRef}
       className="capstackHero"
-      style={gradientStyle}
+      style={{ background: 'var(--background)', position: 'relative' }}
     >
       <canvas
         ref={canvasRef}
         className="capstackHero__canvas"
         aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}
       />
 
-      <div className="capstackHero__content">
+      <div className="capstackHero__content" style={{ position: 'relative', zIndex: 1 }}>
         <nav className="capstackHero__nav" aria-label="Primary">
           <Link href="/" className="capstackHero__brand">
             Capstack
