@@ -45,7 +45,7 @@ function ComplianceNotice() {
       {open && (
         <div
           className="rounded p-3 text-xs text-[#3B6D11]"
-          style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
         >
           This report is produced to support fair lending obligations under the National Credit Act and the Promotion of Equality and Prevention of Unfair Discrimination Act. Data should be reviewed quarterly.
         </div>
@@ -138,8 +138,8 @@ export default function FairnessReportPage() {
 
   return (
     <div
-      className="max-w-3xl mx-auto py-8 px-4"
-      style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh' }}
+      className="w-screen min-h-screen py-8 px-4"
+      style={{ background: '#000', color: 'var(--foreground)', minHeight: '100vh', width: '100vw' }}
     >
       <ComplianceNotice />
       <h1 className="text-2xl font-bold mb-6">Fairness Report</h1>
@@ -152,7 +152,7 @@ export default function FairnessReportPage() {
             style={{
               background: period === p.value ? "var(--color-primary)" : "var(--color-surface)",
               color: period === p.value ? "var(--color-primary-fg)" : "var(--foreground)",
-              border: "0.5px solid var(--color-border)",
+              border: "1px solid var(--color-border)",
               cursor: "pointer",
             }}
             onClick={() => setPeriod(p.value)}
@@ -236,12 +236,12 @@ export default function FairnessReportPage() {
             <table className="min-w-full border text-sm">
               <thead>
                 <tr style={{ background: 'var(--color-surface-2)' }}>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Band</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Applications</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Approval rate</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>AI predicted default</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Actual default</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Variance</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Band</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Applications</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Approval rate</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>AI predicted default</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Actual default</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Variance</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,13 +275,13 @@ export default function FairnessReportPage() {
             <table className="min-w-full border text-sm">
               <thead>
                 <tr style={{ background: 'var(--color-surface-2)' }}>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Adviser</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Decisions</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Overrides</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override rate</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override approval rate</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Override default rate</th>
-                  <th className="px-3 py-2" style={{ border: '0.5px solid var(--color-border)' }}>Flag</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Adviser</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Decisions</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Overrides</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Override rate</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Override approval rate</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Override default rate</th>
+                  <th className="px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>Flag</th>
                 </tr>
               </thead>
               <tbody>
