@@ -27,6 +27,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo') {
+    const response = NextResponse.json({
+      id: 'demo-staff-001',
+      email: 'ops@capstack.demo',
+      name: 'Demo Advisor',
+      role: 'ADMIN',
+      lender: { id: 'demo-lender-001', name: 'Capstack Demo' },
+      type: 'staff',
+    });
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+  }
+
   const session = await parseOpsAuthCookie(req.cookies.get(OPS_AUTH_COOKIE)?.value);
 
   if (!session) {
