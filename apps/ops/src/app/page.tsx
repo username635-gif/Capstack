@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import OpsLayout from './_components/OpsLayout';
@@ -100,20 +100,19 @@ export default function OpsHome() {
   const router = useRouter();
   const session = getSession();
 
-  // Prevent dashboard from rendering before auth redirect.
-  const [redirecting, setRedirecting] = useState(true);
+  // Prevent dashboard from rendering while redirect is in-flight.
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
-    if (!session) {
-      router.replace('/sign-in');
-    } else {
-      router.replace('/applications');
-    }
-    setRedirecting(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
 
-  if (redirecting) return null;
+    if (!session) router.replace('/sign-in');
+    else router.replace('/applications');
+  }, [router, session]);
+
+  // Redirect in an effect; keep the component mounted so React hooks order stays stable.
+
 
   const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
 
