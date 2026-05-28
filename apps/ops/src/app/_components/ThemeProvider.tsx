@@ -13,17 +13,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 type Theme = 'light' | 'dark';
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
-  theme: 'light',
+  theme: 'dark',
   toggle: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>('dark');
 
-  // On mount: read saved preference or OS preference
+  // On mount: read saved preference; if none, default to dark mode
   useEffect(() => {
     const saved = localStorage.getItem('capstack_theme') as Theme | null;
-    const preferred = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const preferred: Theme = saved ?? 'dark';
+
     setTheme(preferred);
     document.documentElement.setAttribute('data-theme', preferred);
   }, []);

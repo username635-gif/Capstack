@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useEffectEvent, useState } from 'react';
+import { redirect } from 'next/navigation';
+
 import OpsLayout from './_components/OpsLayout';
 import { API_BASE_URL, buildOpsApiHeaders } from '@/lib/api-client';
+import { getSession } from '@/lib/session';
 
 type DashboardPayload = {
   generatedAt: string;
@@ -94,9 +97,17 @@ const DEMO_DASHBOARD: DashboardPayload = {
 };
 
 export default function OpsHome() {
+  const session = getSession();
+  if (!session) {
+    redirect('/sign-in');
+    return null;
+  }
+  redirect('/applications');
+  return null;
+
   const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
 
-  const [dashboard, setDashboard] = useState<DashboardPayload | null>(demoMode ? DEMO_DASHBOARD : null);
+  const [dashboard, setDashboard] = useState<DashboardPayload>(DEMO_DASHBOARD);
   const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,11 +149,23 @@ export default function OpsHome() {
     void loadDashboard();
   }, [loadDashboard]);
 
-  const latestWeek = dashboard?.disbursementVelocity[dashboard.disbursementVelocity.length - 1] ?? null;
-  const maxWeeklyCount = Math.max(...(dashboard?.disbursementVelocity.map((bucket) => Math.max(bucket.approvedCount, bucket.disbursedCount)) ?? [1]));
-  const maxCohortPrincipal = Math.max(...(dashboard?.cohorts.map((cohort) => cohort.totalPrincipalCents) ?? [1]));
-  const parTone = statTone(dashboard?.portfolio.portfolioAtRiskPct, true);
-  const nplTone = statTone(dashboard?.portfolio.nplRatePct, true);
+  const latestWeek = dashboard.disbursementVelocity[dashboard.disbursementVelocity.length - 1];
+
+  const latestWeekDisbursedCountText = `${latestWeek?.disbursedCount ?? 0} funded`;
+  const avgPdPct = dashboard.aiPerformance.avgPdPct;
+
+  const latestWeekDisbursedAmountDetailText = latestWeek?.disbursedAmountCents != null
+    ? `${formatCurrency(latestWeek.disbursedAmountCents)} in the latest weekly bucket`
+    : 'Awaiting weekly disbursement events';
+
+  const maxWeeklyCount = Math.max(
+    ...dashboard.disbursementVelocity.map((bucket) => Math.max(bucket.approvedCount, bucket.disbursedCount)),
+  );
+  const maxCohortPrincipal = Math.max(
+    ...dashboard.cohorts.map((cohort) => cohort.totalPrincipalCents),
+  );
+  const parTone = statTone(dashboard.portfolio.portfolioAtRiskPct, true);
+  const nplTone = statTone(dashboard.portfolio.nplRatePct, true);
 
   return (
     <OpsLayout
@@ -195,7 +218,7 @@ export default function OpsHome() {
         </div>
       )}
 
-      {loading && !dashboard ? (
+      {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
@@ -205,7 +228,7 @@ export default function OpsHome() {
             />
           ))}
         </div>
-      ) : dashboard ? (
+      ) : (
         <>
           <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
@@ -227,8 +250,8 @@ export default function OpsHome() {
             />
             <MetricCard
               label="Disbursement velocity"
-              value={latestWeek ? `${latestWeek.disbursedCount} funded` : '—'}
-              detail={latestWeek ? `${formatCurrency(latestWeek.disbursedAmountCents)} in the latest weekly bucket` : 'Awaiting weekly disbursement events'}
+              value={latestWeekDisbursedCountText}
+              detail={latestWeekDisbursedAmountDetailText}
             />
           </div>
 
@@ -284,7 +307,15 @@ export default function OpsHome() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <PerfTile label="AI approval rate" value={formatPercent(dashboard.aiPerformance.approvalRatePct)} />
-                <PerfTile label="Average PD" value={dashboard.aiPerformance.avgPdPct != null ? `${dashboard.aiPerformance.avgPdPct.toFixed(1)}%` : '—'} />
+                <PerfTile
+                  label="Average PD"
+                  value={
+                    (() => {
+                      const v: number | null = dashboard.aiPerformance.avgPdPct;
+                      return v == null ? '—' : `${(v as number).toFixed(1)}%`;
+                    })()
+                  }
+                />
                 <PerfTile label="Aligned default rate" value={formatPercent(dashboard.aiPerformance.aiAlignedDefaultRatePct)} tone={statTone(dashboard.aiPerformance.aiAlignedDefaultRatePct, true)} />
                 <PerfTile label="Override default rate" value={formatPercent(dashboard.aiPerformance.overrideDefaultRatePct)} tone={statTone(dashboard.aiPerformance.overrideDefaultRatePct, true)} />
                 <PerfTile label="Override share" value={formatPercent(dashboard.aiPerformance.overrideApprovalRatePct)} tone={statTone(100 - (dashboard.aiPerformance.overrideApprovalRatePct ?? 0))} />
@@ -345,7 +376,7 @@ export default function OpsHome() {
             </div>
           </section>
         </>
-      ) : null}
+      )}
     </OpsLayout>
   );
 }

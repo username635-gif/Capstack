@@ -34,7 +34,7 @@ function SummaryCard({
   return (
     <div
       className="rounded-lg p-4 flex-1"
-      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+      style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
     >
       <p className="text-xs font-medium uppercase tracking-[0.18em] mb-2" style={{ color: 'var(--color-muted)' }}>
         {label}
@@ -143,12 +143,12 @@ export default function StressTestPage() {
   return (
     <div
       className="w-screen min-h-screen py-8 px-4"
-      style={{ background: '#000', color: 'var(--foreground)', minHeight: '100vh', width: '100vw' }}
+      style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh', width: '100vw' }}
     >
       {/* Disclaimer */}
       <div
         className="mb-6 p-4 rounded-lg"
-        style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}
+        style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
       >
         <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
           <strong style={{ color: 'var(--foreground)' }}>Disclaimer:</strong> This stress test is a simulation tool intended to estimate portfolio behavior under adverse scenarios. Results are probabilistic estimates based on historical patterns and loan characteristics. These projections should not be relied upon as actual forecasts. Use for scenario planning and risk management purposes only.
@@ -162,7 +162,7 @@ export default function StressTestPage() {
         <div className="lg:w-[35%] flex flex-col gap-4">
           <div
             className="rounded-lg p-6"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+            style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
           >
             <h2 className="text-lg font-semibold mb-4">Scenario Parameters</h2>
 
@@ -176,7 +176,7 @@ export default function StressTestPage() {
                 value={rateBpsDelta}
                 onChange={(e) => setRateBpsDelta(Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-lg text-sm"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
               />
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
                 Change from current rates ({rateBpsDelta > 0 ? '+' : ''}{rateBpsDelta} bps)
@@ -194,7 +194,7 @@ export default function StressTestPage() {
                 onChange={(e) => setUnemploymentIncrease(Number(e.target.value))}
                 step="0.01"
                 className="w-full px-3 py-2 rounded-lg text-sm"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
               />
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
                 Percentage point increase ({formatPct(unemploymentIncrease)})
@@ -213,7 +213,7 @@ export default function StressTestPage() {
                 min="1"
                 max="60"
                 className="w-full px-3 py-2 rounded-lg text-sm"
-                style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
               />
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
                 Projection period ({horizonMonths} months)
@@ -238,9 +238,9 @@ export default function StressTestPage() {
               <div
                 className="mt-4 p-3 rounded-lg text-sm"
                 style={{
-                  background: 'var(--color-surface-2)',
+                  background: 'var(--color-surface)',
                   color: 'var(--color-muted)',
-                  border: '1px solid var(--color-border)',
+                  border: '0.5px solid var(--color-border)',
                 }}
               >
                 {error}
@@ -292,7 +292,7 @@ export default function StressTestPage() {
               {/* DPD Distribution Chart */}
               <div
                 className="rounded-lg p-6"
-                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
               >
                 <h3 className="text-lg font-semibold mb-4">DPD Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -313,7 +313,7 @@ export default function StressTestPage() {
           ) : (
             <div
               className="rounded-lg p-12 text-center flex-1 flex items-center justify-center"
-              style={{ background: 'var(--color-surface)', border: '1px dashed var(--color-border)' }}
+              style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
             >
               <div>
                 <p style={{ color: 'var(--color-muted)' }}>
