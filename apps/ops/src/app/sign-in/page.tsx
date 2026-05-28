@@ -20,8 +20,10 @@ export default function StaffSignIn() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Ensure dark theme on initial sign-in page render (ThemeProvider applies via useEffect).
+    // Ensure dark theme + pure black background on initial sign-in page render.
     document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.style.background = 'rgb(0, 0, 0)';
+    document.body.style.background = 'rgb(0, 0, 0)';
 
     const params = new URLSearchParams(window.location.search);
     const reason = params.get('reason');
