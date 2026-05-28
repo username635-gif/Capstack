@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useEffectEvent, useState } from 'react';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import OpsLayout from './_components/OpsLayout';
 import { API_BASE_URL, buildOpsApiHeaders } from '@/lib/api-client';
@@ -97,13 +97,23 @@ const DEMO_DASHBOARD: DashboardPayload = {
 };
 
 export default function OpsHome() {
+  const router = useRouter();
   const session = getSession();
-  if (!session) {
-    redirect('/sign-in');
-    return null;
-  }
-  redirect('/applications');
-  return null;
+
+  // Prevent dashboard from rendering before auth redirect.
+  const [redirecting, setRedirecting] = useState(true);
+
+  useEffect(() => {
+    if (!session) {
+      router.replace('/sign-in');
+    } else {
+      router.replace('/applications');
+    }
+    setRedirecting(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (redirecting) return null;
 
   const demoMode = process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo';
 
@@ -416,7 +426,14 @@ function PerfTile({
   tone?: { bg: string; fg: string };
 }) {
   return (
-    <div className="rounded-xl p-4" style={{ background: tone?.bg ?? 'var(--color-surface-2)', color: tone?.fg ?? 'var(--color-foreground)' }}>
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: tone?.bg ?? 'var(--color-surface-2)',
+        border: '1px solid var(--color-border)',
+        color: tone?.fg ?? 'var(--color-foreground)',
+      }}
+    >
       <div className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: tone?.fg ?? 'var(--color-muted)' }}>
         {label}
       </div>

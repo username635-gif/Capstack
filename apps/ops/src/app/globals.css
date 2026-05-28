@@ -4,7 +4,7 @@
 :root {
   --background: rgb(249, 248, 246);
   --foreground: rgb(14, 13, 12);
-  --color-surface: rgb(249, 248, 246);
+  --color-surface: rgb(255, 255, 255);
   --color-surface-2: rgba(0, 0, 0, 0.04);
 
 
@@ -16,7 +16,7 @@
   --color-danger: rgb(0, 0, 0);
 
   --color-muted: rgb(32, 32, 31);
-  --color-border: rgba(0, 0, 0, 0.10);
+  --color-border: rgba(0, 0, 0, 0.12);
 
   --color-glow: rgba(249, 248, 246, 0.65);
   --color-clear: rgba(255, 255, 255, 0);
