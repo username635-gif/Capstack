@@ -79,7 +79,7 @@ export default function StaffSignIn() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 relative"
-      style={{ background: 'var(--background)', colorScheme: 'dark' }}
+      style={{ background: 'rgb(0, 0, 0)', colorScheme: 'dark' }}
     >
       <div
         className="w-full max-w-md rounded-2xl p-9 relative z-10"
