@@ -20,6 +20,9 @@ export default function StaffSignIn() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Ensure dark theme on initial sign-in page render (ThemeProvider applies via useEffect).
+    document.documentElement.setAttribute('data-theme', 'dark');
+
     const params = new URLSearchParams(window.location.search);
     const reason = params.get('reason');
     const provider = params.get('provider');
@@ -76,7 +79,7 @@ export default function StaffSignIn() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 relative"
-      style={{ background: 'rgb(0, 0, 0)' }}
+      style={{ background: 'var(--background)', colorScheme: 'dark' }}
     >
       <div
         className="w-full max-w-md rounded-2xl p-9 relative z-10"
