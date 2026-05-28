@@ -21,7 +21,6 @@ type Application = {
   approvedAmount?: number; approvedAprBps?: number; approvedTermDays?: number;
 };
 
-
 // Expanded demo data for dashboard
 const DEMO_LOANS: Loan[] = [
   {
@@ -102,12 +101,12 @@ const DEMO_APPS: Application[] = [
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-  ACTIVE:               { bg: 'var(--badge-active-bg)',   fg: 'var(--badge-active-fg)'   },
-  PAID_IN_FULL:         { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
-  DEFAULTED:            { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
-  SUBMITTED:            { bg: 'var(--badge-pending-bg)',  fg: 'var(--badge-pending-fg)'  },
-  APPROVED:             { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
-  REJECTED:             { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
+  ACTIVE: { bg: 'var(--badge-active-bg)', fg: 'var(--badge-active-fg)' },
+  PAID_IN_FULL: { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
+  DEFAULTED: { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
+  SUBMITTED: { bg: 'var(--badge-pending-bg)', fg: 'var(--badge-pending-fg)' },
+  APPROVED: { bg: 'var(--badge-approved-bg)', fg: 'var(--badge-approved-fg)' },
+  REJECTED: { bg: 'var(--badge-declined-bg)', fg: 'var(--badge-declined-fg)' },
   PENDING_DISBURSEMENT: { bg: 'var(--badge-awaiting-bg)', fg: 'var(--badge-awaiting-fg)' },
 };
 
@@ -124,24 +123,23 @@ function badge(status: string) {
 }
 
 function DashboardContent() {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const justApplied  = searchParams.get('applied') === '1';
+  const justApplied = searchParams.get('applied') === '1';
 
-  const [loans, setLoans]         = useState<Loan[]>(DEMO_LOANS);
-  const [apps, setApps]           = useState<Application[]>(DEMO_APPS);
-  const [loading]                  = useState(false);
+  const [loans, setLoans] = useState<Loan[]>(DEMO_LOANS);
+  const [apps, setApps] = useState<Application[]>(DEMO_APPS);
+  const [loading] = useState(false);
   const [session, setSessionState] = useState<ReturnType<typeof getSession>>(null);
-  const [calcOpen, setCalcOpen]    = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   // Payment panel state
-  const [payingId,  setPayingId]  = useState<string | null>(null);
-  const [payStep,   setPayStep]   = useState<1 | 2>(1);       // 1=amount  2=card
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payStep, setPayStep] = useState<1 | 2>(1); // 1=amount  2=card
   const [payAmount, setPayAmount] = useState('');
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [payStatus, setPayStatus] = useState<'idle' | 'processing' | 'done'>('idle');
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
-
 
   function fmt(d: string) {
     return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -150,7 +148,6 @@ function DashboardContent() {
   // Removed constellation/canvas background effect.
   // NOTE: This section previously contained a partially-edited animation loop which broke Turbopack parsing.
   // The dashboard UI does not require the canvas animation; demo content remains fully functional.
-
 
   function openPay(loanId: string, monthlyEstimate: number) {
     setPayingId(loanId);
@@ -175,8 +172,12 @@ function DashboardContent() {
     setTimeout(() => {
       setLoans(prev => prev.map(l =>
         l.id === loan.id
-          ? { ...l, outstandingPrincipal: Math.max(0, l.outstandingPrincipal - cents), daysPastDue: 0,
-              status: l.outstandingPrincipal - cents <= 0 ? 'PAID_IN_FULL' : l.status }
+          ? {
+            ...l,
+            outstandingPrincipal: Math.max(0, l.outstandingPrincipal - cents),
+            daysPastDue: 0,
+            status: l.outstandingPrincipal - cents <= 0 ? 'PAID_IN_FULL' : l.status,
+          }
           : l
       ));
       setPayStatus('done');
@@ -280,7 +281,7 @@ function DashboardContent() {
           ) : loans.length === 0 ? (
             <div
               className="rounded-xl p-10 text-center"
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+              style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
             >
               <p className="text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
                 You don&apos;t have any active loans yet.
@@ -303,7 +304,7 @@ function DashboardContent() {
                   <div
                     key={loan.id}
                     className="rounded-xl p-6"
-                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                    style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -360,8 +361,7 @@ function DashboardContent() {
 
                     {/* Payment panel */}
                     {payingId === loan.id && (
-                      <div className="mt-4 rounded-md p-4" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
-
+                      <div className="mt-4 rounded-md p-4" style={{ background: 'var(--color-surface-2)', border: '0.5px solid var(--color-border)' }}>
                         {/* ── Success ── */}
                         {payStatus === 'done' && (
                           <p className="text-sm font-semibold text-center py-2" style={{ color: 'var(--badge-approved-fg)' }}>
@@ -475,7 +475,7 @@ function DashboardContent() {
         {apps.length > 0 && (
           <div>
             <h2 className="text-xl font-bold mb-5">My applications</h2>
-            <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+            <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}>
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -569,3 +569,4 @@ export default function Dashboard() {
     </Suspense>
   );
 }
+

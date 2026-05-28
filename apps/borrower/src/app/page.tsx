@@ -53,7 +53,7 @@ export default function BorrowerHome() {
             Demo example
           </span>
         </div>
-        <div className="rounded-xl p-6" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+        <div className="rounded-xl p-6" style={{ background: "var(--color-surface)", border: "0.5px solid var(--color-border)" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-sm mb-1" style={{ color: "var(--color-muted)" }}>Example personal loan · REF-DEMO-00812</div>
