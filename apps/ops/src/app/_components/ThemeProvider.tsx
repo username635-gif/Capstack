@@ -22,12 +22,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: read saved preference; if none, default to dark mode
   useEffect(() => {
-    const saved = localStorage.getItem('capstack_theme') as Theme | null;
-    const preferred: Theme = saved ?? 'dark';
+    const saved = localStorage.getItem('capstack-ops-theme');
+    const initial: Theme = saved === 'light' || saved === 'dark' ? saved : 'dark';
 
-    setTheme(preferred);
-    document.documentElement.setAttribute('data-theme', preferred);
+    setTheme(initial);
+    document.documentElement.setAttribute('data-theme', initial);
   }, []);
+
 
   function toggle() {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
