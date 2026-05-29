@@ -412,27 +412,25 @@ export default function OpsLayout({
         </button>
       </div>
 
-      {/* Mobile drawer + overlay */}
+      {/* Mobile drawer + overlay (only render when drawerOpen === true) */}
       {drawerOpen && (
         <>
           <div
-            role="button"
-            tabIndex={0}
-            aria-label="Close menu"
-            onClick={() => setDrawerOpen(false)}
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 50,
+              zIndex: 40,
               background: 'rgba(0,0,0,0.4)',
             }}
+            onClick={() => setDrawerOpen(false)}
           />
+
           <aside
             style={{
               position: 'fixed',
               top: 0,
               left: 0,
-              height: '100%',
+              height: '100vh',
               width: 280,
               zIndex: 50,
               background: 'var(--color-surface)',
@@ -443,6 +441,7 @@ export default function OpsLayout({
               flexDirection: 'column',
             }}
           >
+
             {sidebarContent}
           </aside>
         </>
