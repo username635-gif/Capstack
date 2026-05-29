@@ -383,13 +383,36 @@ export default function OpsLayout({
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+    <div style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
       {calcOpen && <SimpleCalculator onClose={() => setCalcOpen(false)} />}
 
-      {/* Mobile topbar */}
+      {/* Desktop sidebar — position fixed, not in document flow */}
+      <aside
+        className="hidden md:flex flex-col"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100vh',
+          width: '200px',
+          zIndex: 40,
+          background: 'var(--color-surface)',
+          borderRight: '1px solid var(--color-border)',
+        }}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile topbar — only on mobile */}
       <div
         className="flex md:hidden h-16 items-center px-5"
-        style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+        style={{
+          borderBottom: '1px solid var(--color-border)',
+          background: 'var(--color-surface)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+        }}
       >
         <span className="font-bold text-base tracking-tight">
           Capstack <span style={{ color: 'var(--color-secondary)' }}>Ops</span>
@@ -412,7 +435,7 @@ export default function OpsLayout({
         </button>
       </div>
 
-      {/* Mobile drawer + overlay (only render when drawerOpen === true) */}
+      {/* Mobile drawer */}
       {drawerOpen && (
         <>
           <div
@@ -424,7 +447,6 @@ export default function OpsLayout({
             }}
             onClick={() => setDrawerOpen(false)}
           />
-
           <aside
             style={{
               position: 'fixed',
@@ -435,36 +457,30 @@ export default function OpsLayout({
               zIndex: 50,
               background: 'var(--color-surface)',
               borderRight: '1px solid var(--color-border)',
-              transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
-              transition: 'transform 200ms ease',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
-
             {sidebarContent}
           </aside>
         </>
       )}
 
-      {/* Desktop sidebar (unchanged) */}
-      <div className="hidden md:flex">
-        <aside
-          className="w-56 flex-shrink-0 flex flex-col"
-          style={{ background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)' }}
-        >
-          {sidebarContent}
-        </aside>
-      </div>
-
-      {/* Main content */}
+      {/* Main content — offset only on desktop */}
       <div
-        className="flex flex-col overflow-hidden flex-1 md:ml-[200px]"
-        style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh' }}
+        className="md:ml-[200px]"
+        style={{
+          background: 'var(--background)',
+          color: 'var(--foreground)',
+          minHeight: '100vh',
+        }}
       >
         <header
-          className="h-16 flex items-center justify-between px-8"
-          style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+          className="h-16 hidden md:flex items-center justify-between px-8"
+          style={{
+            borderBottom: '1px solid var(--color-border)',
+            background: 'var(--color-surface)',
+          }}
         >
           <h1 className="text-lg font-bold">{title}</h1>
           {action && <div className="flex items-center gap-3">{action}</div>}
