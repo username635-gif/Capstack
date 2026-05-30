@@ -319,9 +319,9 @@ export default function ApplicationsPage() {
   return (
     <OpsLayout title="Applications">
       <div className="p-6">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
           <h1 className="text-xl font-bold">Applications queue</h1>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {ALL_STATUSES.map((s) => (
               <button
                 key={s}
