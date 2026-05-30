@@ -259,6 +259,9 @@ export default function ReportsPage() {
   const loadDashboard = useEffectEvent(async () => {
     setLoading(true);
     setError(null);
+    if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo') {
+      setLoading(false);
+      return;
 
     try {
       const headers = await buildOpsApiHeaders();
