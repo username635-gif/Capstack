@@ -475,8 +475,8 @@ function DashboardContent() {
         {apps.length > 0 && (
           <div>
             <h2 className="text-xl font-bold mb-5">My applications</h2>
-            <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}>
-              <table className="w-full text-sm">
+            <div className="rounded-xl overflow-x-auto" style={{ background: 'var(--color-surface)', border: '0.5px solid var(--color-border)' }}>
+              <table className="min-w-[600px] w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                     {['Product', 'Amount', 'Submitted', 'Status', ''].map(h => (
