@@ -340,8 +340,8 @@ export default function ApplicationsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-          <table className="w-full text-sm">
+        <div className="rounded-xl overflow-x-auto" style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+          <table className="min-w-[700px] w-full text-sm">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
