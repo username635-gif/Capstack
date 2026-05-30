@@ -166,3 +166,13 @@ button:focus-visible {
 :where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-secondary)"] {
   color: var(--color-secondary-fg) !important;
 }
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] select option {
+  background-color: rgb(14, 13, 12);
+  color: rgb(249, 248, 246);
+}
