@@ -398,7 +398,7 @@ export default function ReportsPage() {
               style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
             >
               {REPORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value} style={{ background: 'var(--color-surface-2)', color: 'var(--foreground)' }}>{option.label}</option>
               ))}
             </select>
             <p className="text-xs mt-1" style={{ color: 'var(--color-muted)' }}>
