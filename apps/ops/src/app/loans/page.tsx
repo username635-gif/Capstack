@@ -105,8 +105,8 @@ function LoansPageInnerDemo() {
         <p className="text-sm text-[var(--color-muted)]">Demo mode: showing sample loans.</p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-        <table className="min-w-full text-left text-sm">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto">
+        <table className="min-w-[640px] text-left text-sm">
           <thead className="bg-[var(--color-surface-2)] text-[var(--color-muted)]">
             <tr>
               {['Loan #', 'Borrower', 'Product', 'Outstanding', 'APR', 'DPD', 'Status', 'Disbursed'].map((heading) => (
@@ -274,8 +274,8 @@ function LoansPageInnerLive() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-        <table className="min-w-full text-left text-sm">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto">
+        <table className="min-w-[640px] text-left text-sm">
           <thead className="bg-[var(--color-surface-2)] text-[var(--color-muted)]">
             <tr>
               {['Loan #', 'Borrower', 'Product', 'Outstanding', 'APR', 'DPD', 'Status', 'Disbursed'].map((heading) => (
