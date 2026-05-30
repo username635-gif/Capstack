@@ -262,6 +262,7 @@ export default function ReportsPage() {
     if (process.env.NEXT_PUBLIC_OPS_AUTH_MODE === 'demo') {
       setLoading(false);
       return;
+    }
 
     try {
       const headers = await buildOpsApiHeaders();
