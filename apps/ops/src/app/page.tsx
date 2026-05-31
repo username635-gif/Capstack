@@ -103,13 +103,12 @@ export default function OpsHome() {
   // Prevent dashboard from rendering while redirect is in-flight.
   const redirectedRef = useRef(false);
 
-  useEffect(() => {
+ useEffect(() => {
     if (redirectedRef.current) return;
     redirectedRef.current = true;
-
     if (!session) router.replace('/sign-in');
-    else router.replace('/applications');
   }, [router, session]);
+
 
   // Redirect in an effect; keep the component mounted so React hooks order stays stable.
 

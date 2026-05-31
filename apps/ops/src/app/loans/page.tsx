@@ -106,7 +106,7 @@ function LoansPageInnerDemo() {
       </div>
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto w-full max-w-full">
-        <table className="min-w-[640px] text-left text-sm">
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className="bg-[var(--color-surface-2)] text-[var(--color-muted)]">
             <tr>
               {['Loan #', 'Borrower', 'Product', 'Outstanding', 'APR', 'DPD', 'Status', 'Disbursed'].map((heading) => (
