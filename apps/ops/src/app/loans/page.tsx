@@ -105,7 +105,7 @@ function LoansPageInnerDemo() {
         <p className="text-sm text-[var(--color-muted)]">Demo mode: showing sample loans.</p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto w-full max-w-full">
         <table className="min-w-[640px] text-left text-sm">
           <thead className="bg-[var(--color-surface-2)] text-[var(--color-muted)]">
             <tr>
