@@ -17,7 +17,18 @@ export default function PartnerSignIn() {
     if (!apiKey.trim()) return;
     setLoading(true);
     setError(null);
-
+    // DEMO MODE — bypass real API
+    if (apiKey.trim() === 'demo') {
+      setSession({
+        id: 'partner-demo',
+        name: 'Demo Partner',
+        slug: 'demo-partner',
+        lenderId: 'lender-001',
+        type: 'partner',
+      });
+      router.replace('/loans');
+      return;
+    }
     try {
       const res  = await fetch(`${API}/api/v1/auth/partner`, {
         method:  'POST',
@@ -25,13 +36,11 @@ export default function PartnerSignIn() {
         body:    JSON.stringify({ apiKey: apiKey.trim() }),
       });
       const json = await res.json();
-
       if (!res.ok) {
         setError(json.error ?? 'Invalid API key.');
         setLoading(false);
         return;
       }
-
       setSession(json);
       router.replace('/loans');
     } catch {
@@ -39,7 +48,6 @@ export default function PartnerSignIn() {
       setLoading(false);
     }
   }
-
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
