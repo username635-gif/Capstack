@@ -35,9 +35,16 @@ export default function PartnerLayout({
 
   useEffect(() => {
     const s = getSession();
-    if (!s) { router.replace('/sign-in'); return; }
-    setSession(s);
+    if (!s) {
+      router.replace('/sign-in');
+      return;
+    }
+
+    // Avoid setting state synchronously in the effect body.
+    queueMicrotask(() => setSession(s));
   }, [router]);
+
+
 
   if (!session) {
     return (

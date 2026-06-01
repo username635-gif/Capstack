@@ -10,8 +10,11 @@ export default function PartnerSettings() {
   const [saved,   setSaved]   = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSession(getSession());
   }, []);
+
+
 
   return (
     <PartnerLayout title="Settings">

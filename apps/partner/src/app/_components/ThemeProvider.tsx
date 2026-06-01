@@ -14,10 +14,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('capstack_theme') as Theme | null;
-    const preferred = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    setTheme(preferred);
+    const preferred: Theme =
+      saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    // Only apply the DOM attribute here; avoid setting React state inside the effect.
     document.documentElement.setAttribute('data-theme', preferred);
   }, []);
+
+
+
+
 
   function toggle() {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
