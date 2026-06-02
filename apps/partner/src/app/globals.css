@@ -168,4 +168,8 @@ button:focus-visible {
 :where(a, button, input[type="button"], input[type="submit"])[style*="background: var(--color-secondary)"] {
   color: var(--color-secondary-fg) !important;
 }
-
+/* Force select option text visibility in dark mode */
+select option {
+  background: var(--background);
+  color: var(--foreground);
+}
