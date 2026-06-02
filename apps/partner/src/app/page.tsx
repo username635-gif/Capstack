@@ -75,7 +75,7 @@ export default function PartnerHome() {
           {/* Stats */}
           <div className="grid grid-cols-4 gap-4 mb-8">
             {partnerStats.map((s) => (
-              <div key={s.label} className="rounded-xl p-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+              <div key={s.label} className="rounded-xl p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                 <div className="text-xs mb-2" style={{ color: "var(--color-muted)" }}>{s.label}</div>
                 <div className="text-2xl font-black">{s.value}</div>
                 <div className="text-xs mt-1" style={{ color: "var(--color-muted)" }}>{s.delta}</div>
@@ -87,7 +87,7 @@ export default function PartnerHome() {
           <div className="grid grid-cols-3 gap-6">
 
             {/* Loan table */}
-            <div className="col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <div className="col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
                 <span className="font-bold">Recent loans</span>
                 <a href="/loans" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
@@ -127,7 +127,7 @@ export default function PartnerHome() {
             </div>
 
             {/* API key panel */}
-            <div className="rounded-xl p-6 flex flex-col gap-5" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <div className="rounded-xl p-6 flex flex-col gap-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <div className="font-bold">API credentials</div>
               <div>
                 <div className="text-xs mb-1" style={{ color: "var(--color-muted)" }}>Key ID</div>
