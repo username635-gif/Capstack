@@ -35,7 +35,7 @@ export default function PartnerProducts() {
             <div
               key={p.id}
               className="rounded-2xl p-6 flex flex-col gap-4"
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+              style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
             >
               <div>
                 <div className="font-bold text-lg mb-1">{p.name}</div>
@@ -80,7 +80,7 @@ export default function PartnerProducts() {
           ))}
 
           {data.length === 0 && (
-            <div className="col-span-3 rounded-xl p-10 text-center" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+            <div className="col-span-3 rounded-xl p-10 text-center" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
               <p className="text-sm" style={{ color: 'var(--color-muted)' }}>No products available.</p>
             </div>
           )}

@@ -62,7 +62,7 @@ export default function PartnerReports() {
     <PartnerLayout title="Reports">
       <div className="max-w-3xl flex flex-col gap-6">
         <div className="rounded-2xl p-6 flex flex-col md:flex-row gap-5 items-end"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+          style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
         >
           <div className="flex flex-col gap-1.5 flex-1">
             <label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Report type</label>
@@ -100,7 +100,7 @@ export default function PartnerReports() {
         )}
 
         {data && (
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
               <h3 className="font-bold">{reportType} Report</h3>
               <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{from} to {to}</span>
@@ -112,7 +112,7 @@ export default function PartnerReports() {
         )}
 
         {!data && !loading && !error && (
-          <div className="rounded-xl p-10 text-center" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div className="rounded-xl p-10 text-center" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <p className="text-sm" style={{ color: 'var(--color-muted)' }}>Select report type and date range, then click Generate.</p>
           </div>
         )}
