@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ThemeToggle } from './_components/ThemeProvider';
+import { clearSession } from '@/lib/session';
 
 const partnerStats = [
   { label: "Loans originated", value: "342", delta: "+18 this month" },
@@ -54,6 +55,13 @@ export default function PartnerHome() {
           <ThemeToggle />
           <div className="text-xs" style={{ color: "var(--color-muted)" }}>Partner</div>
           <div className="text-sm font-semibold mt-0.5">First National Finance</div>
+          <button
+            onClick={() => { clearSession(); window.location.href = '/sign-in'; }}
+            className="text-xs font-medium text-left"
+            style={{ color: "var(--color-danger)" }}
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
