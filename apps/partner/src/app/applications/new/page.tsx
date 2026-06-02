@@ -139,7 +139,7 @@ export default function NewPartnerApplication() {
                     value={empStatus}
                     onChange={e => setEmpStatus(e.target.value)}
                     className="px-4 py-3 rounded-lg text-sm"
-                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none', colorScheme: 'inherit' }}
                   >
                     {['EMPLOYED','SELF_EMPLOYED','UNEMPLOYED','PENSIONER'].map(s => (
                       <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
@@ -168,7 +168,7 @@ export default function NewPartnerApplication() {
                   value={productId}
                   onChange={e => setProductId(e.target.value)}
                   className="px-4 py-3 rounded-lg text-sm"
-                  style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+                  style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none', colorScheme: 'inherit' }}
                 >
                   <option value="">Select product…</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

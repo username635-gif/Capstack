@@ -68,7 +68,7 @@ export default function PartnerReports() {
             <label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Report type</label>
             <select value={reportType} onChange={e => setReportType(e.target.value as ReportType)}
               className="px-4 py-3 rounded-lg text-sm"
-              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none' }}
+             style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)', outline: 'none', colorScheme: 'inherit' }}
             >
               {(['NCR','FICA','NCA','IFRS9'] as ReportType[]).map(t => <option key={t} value={t}>{t}</option>)}
             </select>
