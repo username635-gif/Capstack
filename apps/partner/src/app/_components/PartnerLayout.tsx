@@ -70,7 +70,7 @@ export default function PartnerLayout({
 
       {/* Sidebar */}
       <aside
-        className={`w-56 flex-shrink-0 flex flex-col hidden sm:flex ${menuOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0' : 'fixed inset-y-0 left-0 z-50 -translate-x-full'} sm:static sm:translate-x-0 transition-transform duration-200`}
+        className={`w-56 flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-50 transition-transform duration-200 sm:static sm:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}
         style={{ background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)' }}
       >
         <div className="h-16 flex items-center px-5" style={{ borderBottom: '1px solid var(--color-border)' }}>
