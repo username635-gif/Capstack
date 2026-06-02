@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { ThemeToggle } from './_components/ThemeProvider';
 import { clearSession } from '@/lib/session';
@@ -29,8 +30,58 @@ const navItems = [
 ];
 
 export default function PartnerHome() {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className="flex min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+
+      {/* Mobile overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 sm:hidden" onClick={() => setMenuOpen(false)} />
+      )}
+
+      {/* Mobile sliding sidebar - slides in from right */}
+      <div
+        className="fixed top-0 right-0 h-full w-64 z-50 flex flex-col sm:hidden transition-transform duration-200"
+        style={{
+          background: "var(--color-surface)",
+          borderLeft: "1px solid var(--color-border)",
+          transform: menuOpen ? "translateX(0)" : "translateX(100%)",
+        }}
+      >
+        <div className="h-16 flex items-center justify-between px-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
+          <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-secondary)" }}>Partner</span></span>
+          <button onClick={() => setMenuOpen(false)} className="text-xl font-bold" style={{ color: "var(--foreground)" }}>✕</button>
+        </div>
+        <nav className="flex flex-col gap-1 p-3 flex-1">
+          {navItems.map((item, i) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
+              style={{
+                background: i === 0 ? "var(--color-surface-2)" : "transparent",
+                color: i === 0 ? "var(--foreground)" : "var(--color-muted)",
+                border: i === 0 ? "1px solid var(--color-border)" : "1px solid transparent",
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="p-4 flex flex-col gap-3" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <ThemeToggle />
+          <div className="text-xs" style={{ color: "var(--color-muted)" }}>Partner</div>
+          <div className="text-sm font-semibold mt-0.5">First National Finance</div>
+          <button
+            onClick={() => { clearSession(); window.location.href = '/sign-in'; }}
+            className="text-xs font-medium text-left"
+            style={{ color: "var(--color-danger)" }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
 
       {/* Sidebar - hidden on mobile */}
       <aside className="hidden sm:flex w-56 flex-shrink-0 flex-col" style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}>
@@ -70,15 +121,21 @@ export default function PartnerHome() {
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
-          <h1 className="text-lg font-bold">Portfolio overview</h1>
-          <div className="flex items-center gap-3">
-            <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}>
-              + Originate loan
-            </Link>
-          </div>
-        </header>
+          {/* Top bar */}
+          <header className="h-16 flex items-center justify-between px-4 sm:px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+            <span className="font-bold text-base tracking-tight sm:hidden">Capstack <span style={{ color: "var(--color-secondary)" }}>Partner</span></span>
+            <h1 className="text-lg font-bold hidden sm:block">Portfolio overview</h1>
+            <div className="flex items-center gap-3">
+              <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold hidden sm:block" style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}>
+                + Originate loan
+              </Link>
+              <button onClick={() => setMenuOpen(true)} className="flex sm:hidden flex-col gap-1.5 p-2" aria-label="Open menu">
+                <span className="block w-6 h-0.5" style={{ background: "var(--foreground)" }} />
+                <span className="block w-6 h-0.5" style={{ background: "var(--foreground)" }} />
+                <span className="block w-6 h-0.5" style={{ background: "var(--foreground)" }} />
+              </button>
+            </div>
+          </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-8">
 
