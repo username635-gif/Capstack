@@ -61,8 +61,8 @@ export default function PartnerReports() {
   return (
     <PartnerLayout title="Reports">
       <div className="max-w-3xl flex flex-col gap-6">
-        <div className="rounded-2xl p-6 flex flex-col md:flex-row gap-5 items-end"
-          style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
+        <div className="rounded-2xl p-6 flex flex-col md:flex-row gap-5 items-start"
+          style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', alignItems: 'flex-start' }}
         >
           <div className="flex flex-col gap-1.5 flex-1">
             <label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>Report type</label>

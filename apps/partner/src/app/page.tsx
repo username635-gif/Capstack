@@ -41,11 +41,11 @@ export default function PartnerHome() {
 
       {/* Mobile sliding sidebar - slides in from right */}
       <div
-        className="fixed top-0 right-0 h-full w-64 z-50 flex flex-col sm:hidden transition-transform duration-200"
+        className="fixed top-0 left-0 h-full w-64 z-50 flex flex-col sm:hidden transition-transform duration-200"
         style={{
           background: "var(--color-surface)",
           borderLeft: "1px solid var(--color-border)",
-          transform: menuOpen ? "translateX(0)" : "translateX(100%)",
+          transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
         }}
       >
         <div className="h-16 flex items-center justify-between px-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
