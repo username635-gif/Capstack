@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { ThemeToggle } from './_components/ThemeProvider';
 import { clearSession } from '@/lib/session';
