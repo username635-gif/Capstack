@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getSession, clearSession, PartnerSession } from '@/lib/session';
+import { useCallback } from 'react';
 
 const NAV = [
   { label: 'Overview',     href: '/' },
@@ -32,6 +33,9 @@ export default function PartnerLayout({
   const router   = useRouter();
   const pathname = usePathname();
   const [session, setSession] = useState<PartnerSession | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
     const s = getSession();
@@ -56,9 +60,17 @@ export default function PartnerLayout({
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+      {/* Mobile overlay */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 sm:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="w-56 flex-shrink-0 flex flex-col"
+        className={`w-56 flex-shrink-0 flex flex-col hidden sm:flex ${menuOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0' : 'fixed inset-y-0 left-0 z-50 -translate-x-full'} sm:static sm:translate-x-0 transition-transform duration-200`}
         style={{ background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)' }}
       >
         <div className="h-16 flex items-center px-5" style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -77,6 +89,7 @@ export default function PartnerLayout({
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={closeMenu}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
                 style={{
                   background: active ? 'var(--color-surface-2)' : 'transparent',
@@ -106,14 +119,25 @@ export default function PartnerLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header
-          className="h-16 flex items-center justify-between px-8"
+          className="h-16 flex items-center justify-between px-4 sm:px-8"
           style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
         >
+          {/* Hamburger button for mobile */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex sm:hidden flex-col gap-1.5 p-2"
+            title="Toggle menu"
+          >
+            <span className="block w-5 h-0.5" style={{ background: 'var(--foreground)' }} />
+            <span className="block w-5 h-0.5" style={{ background: 'var(--foreground)' }} />
+            <span className="block w-5 h-0.5" style={{ background: 'var(--foreground)' }} />
+          </button>
+          
           <h1 className="text-lg font-bold">{title}</h1>
           {action && <div className="flex items-center gap-3">{action}</div>}
         </header>
 
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-4 sm:p-8">{children}</main>
       </div>
     </div>
   );

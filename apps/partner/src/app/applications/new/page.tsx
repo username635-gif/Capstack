@@ -88,7 +88,7 @@ export default function NewPartnerApplication() {
 
   return (
     <PartnerLayout title="New Application">
-      <div className="max-w-xl">
+      <div className="max-w-xl w-full px-4 sm:px-0">
         {/* Progress */}
         <div className="flex items-center gap-4 mb-8">
           {[1, 2, 3].map(s => (
@@ -112,7 +112,7 @@ export default function NewPartnerApplication() {
           {step === 1 && (
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-bold">Borrower details</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   ['First name', firstName, setFirstName, 'text', 'Jane'],
                   ['Last name',  lastName,  setLastName,  'text', 'Smith'],

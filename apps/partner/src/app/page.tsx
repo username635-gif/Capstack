@@ -32,8 +32,8 @@ export default function PartnerHome() {
   return (
     <div className="flex min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
 
-      {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col" style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}>
+      {/* Sidebar - hidden on mobile */}
+      <aside className="hidden sm:flex w-56 flex-shrink-0 flex-col" style={{ background: "var(--color-surface)", borderRight: "1px solid var(--color-border)" }}>
         <div className="h-16 flex items-center px-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <span className="font-bold text-base tracking-tight">Capstack <span style={{ color: "var(--color-secondary)" }}>Partner</span></span>
         </div>
@@ -71,7 +71,7 @@ export default function PartnerHome() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+        <header className="h-16 flex items-center justify-between px-4 sm:px-8" style={{ borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
           <h1 className="text-lg font-bold">Portfolio overview</h1>
           <div className="flex items-center gap-3">
             <Link href="/applications/new" className="text-sm px-4 py-2 rounded-lg font-semibold" style={{ background: "var(--color-primary)", color: "var(--color-primary-fg)" }}>
@@ -80,10 +80,10 @@ export default function PartnerHome() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-8">
+        <main className="flex-1 overflow-auto p-4 sm:p-8">
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             {partnerStats.map((s) => (
               <div key={s.label} className="rounded-xl p-5" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                 <div className="text-xs mb-2" style={{ color: "var(--color-muted)" }}>{s.label}</div>
@@ -94,46 +94,48 @@ export default function PartnerHome() {
           </div>
 
           {/* Two columns */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
             {/* Loan table */}
-            <div className="col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
+            <div className="sm:col-span-2 rounded-xl overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
                 <span className="font-bold">Recent loans</span>
                 <a href="/loans" className="text-xs" style={{ color: "var(--color-secondary)" }}>View all</a>
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                    {["Reference", "Borrower", "Amount", "Disbursed", "Repaid", "Status"].map((h) => (
-                      <th key={h} className="text-left px-5 py-3 font-medium text-xs uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLoans.map((l, i) => (
-                    <tr key={l.ref} style={{ borderBottom: i < recentLoans.length - 1 ? "1px solid var(--color-border)" : "none" }}>
-                      <td className="px-5 py-3 font-mono text-xs" style={{ color: "var(--color-muted)" }}>{l.ref}</td>
-                      <td className="px-5 py-3 font-medium">{l.borrower}</td>
-                      <td className="px-5 py-3 font-semibold">{l.amount}</td>
-                      <td className="px-5 py-3" style={{ color: "var(--color-muted)" }}>{l.disbursed}</td>
-                      <td className="px-5 py-3 w-28">
-                        <div className="flex items-center gap-2">
-                          <progress value={l.repaid} max={100} style={{ width: 60 }} />
-                          <span className="text-xs" style={{ color: "var(--color-muted)" }}>{l.repaid}%</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-xs font-semibold px-2 py-1 rounded-full"
-                          style={{
-                            background: l.status === "Active" ? "var(--badge-active-bg)" : "var(--badge-overdue-bg)",
-                            color: l.status === "Active" ? "var(--badge-active-fg)" : "var(--badge-overdue-fg)",
-                          }}>{l.status}</span>
-                      </td>
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                      {["Reference", "Borrower", "Amount", "Disbursed", "Repaid", "Status"].map((h) => (
+                        <th key={h} className="text-left px-5 py-3 font-medium text-xs uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentLoans.map((l, i) => (
+                      <tr key={l.ref} style={{ borderBottom: i < recentLoans.length - 1 ? "1px solid var(--color-border)" : "none" }}>
+                        <td className="px-5 py-3 font-mono text-xs" style={{ color: "var(--color-muted)" }}>{l.ref}</td>
+                        <td className="px-5 py-3 font-medium">{l.borrower}</td>
+                        <td className="px-5 py-3 font-semibold">{l.amount}</td>
+                        <td className="px-5 py-3" style={{ color: "var(--color-muted)" }}>{l.disbursed}</td>
+                        <td className="px-5 py-3 w-28">
+                          <div className="flex items-center gap-2">
+                            <progress value={l.repaid} max={100} style={{ width: 60 }} />
+                            <span className="text-xs" style={{ color: "var(--color-muted)" }}>{l.repaid}%</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full"
+                            style={{
+                              background: l.status === "Active" ? "var(--badge-active-bg)" : "var(--badge-overdue-bg)",
+                              color: l.status === "Active" ? "var(--badge-active-fg)" : "var(--badge-overdue-fg)",
+                            }}>{l.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* API key panel */}

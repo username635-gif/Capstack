@@ -78,7 +78,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-sm">
+    <div className="flex flex-col sm:flex-row sm:justify-between text-sm gap-2">
       <span style={{ color: 'var(--color-muted)' }}>{label}</span>
       <span className="font-semibold font-mono text-xs">{value}</span>
     </div>

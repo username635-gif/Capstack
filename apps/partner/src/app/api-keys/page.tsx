@@ -87,7 +87,7 @@ export default function ApiKeysPage() {
         {/* Create new key */}
         <div className="rounded-2xl p-6" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
           <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--color-muted)' }}>Generate a new API key</h3>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={description}
@@ -120,44 +120,46 @@ export default function ApiKeysPage() {
           </div>
         ) : (
           <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-                  {['Key ID','Description','Created','Last used','Status',''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {creds.map((c, i) => (
-                  <tr key={c.id} style={{ borderBottom: i < creds.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                    <td className="px-4 py-3 font-mono text-xs">{c.keyId}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--color-muted)' }}>{c.description ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>{new Date(c.createdAt).toLocaleDateString('en-ZA')}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>
-                      {c.lastUsedAt ? new Date(c.lastUsedAt).toLocaleDateString('en-ZA') : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-semibold" style={{ color: c.isActive ? 'var(--badge-approved-fg)' : 'var(--color-muted)' }}>
-                        {c.isActive ? 'Active' : 'Revoked'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {c.isActive && (
-                        <button
-                          onClick={() => revokeKey(c.id)}
-                          disabled={revoking === c.id}
-                          className="text-xs font-semibold disabled:opacity-40"
-                          style={{ color: 'var(--badge-declined-fg)' }}
-                        >
-                          {revoking === c.id ? 'Revoking…' : 'Revoke'}
-                        </button>
-                      )}
-                    </td>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+                    {['Key ID','Description','Created','Last used','Status',''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {creds.map((c, i) => (
+                    <tr key={c.id} style={{ borderBottom: i < creds.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                      <td className="px-4 py-3 font-mono text-xs">{c.keyId}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-muted)' }}>{c.description ?? '—'}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>{new Date(c.createdAt).toLocaleDateString('en-ZA')}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>
+                        {c.lastUsedAt ? new Date(c.lastUsedAt).toLocaleDateString('en-ZA') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-semibold" style={{ color: c.isActive ? 'var(--badge-approved-fg)' : 'var(--color-muted)' }}>
+                          {c.isActive ? 'Active' : 'Revoked'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.isActive && (
+                          <button
+                            onClick={() => revokeKey(c.id)}
+                            disabled={revoking === c.id}
+                            className="text-xs font-semibold disabled:opacity-40"
+                            style={{ color: 'var(--badge-declined-fg)' }}
+                          >
+                            {revoking === c.id ? 'Revoking…' : 'Revoke'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

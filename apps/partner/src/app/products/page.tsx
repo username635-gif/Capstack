@@ -44,7 +44,7 @@ export default function PartnerProducts() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-xs mb-0.5" style={{ color: 'var(--color-muted)' }}>Loan range</div>
                   <div className="font-semibold">

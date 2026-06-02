@@ -50,36 +50,38 @@ export default function PartnerApplications() {
       </div>
 
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-              {['Borrower','Product','Amount','Term','Status','Submitted'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a, i) => (
-              <tr key={a.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--color-border)' : 'none' }}
-                className="hover:bg-[var(--color-surface-2)] transition-colors cursor-pointer"
-                onClick={() => router.push(`/applications/${a.id}`)}
-              >
-                <td className="px-4 py-3 font-medium">{a.borrower?.firstName} {a.borrower?.lastName}</td>
-                <td className="px-4 py-3">{a.product?.name ?? '—'}</td>
-                <td className="px-4 py-3 font-semibold">R {(a.amountRequested / 100).toLocaleString()}</td>
-                <td className="px-4 py-3">{a.termMonths}m</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs font-semibold" style={{ color: STATUS_COLORS[a.status] ?? 'var(--color-muted)' }}>
-                    {a.status.replace(/_/g, ' ')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>
-                  {new Date(a.submittedAt).toLocaleDateString('en-ZA')}
-                </td>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+                {['Borrower','Product','Amount','Term','Status','Submitted'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-muted)' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((a, i) => (
+                <tr key={a.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--color-border)' : 'none' }}
+                  className="hover:bg-[var(--color-surface-2)] transition-colors cursor-pointer"
+                  onClick={() => router.push(`/applications/${a.id}`)}
+                >
+                  <td className="px-4 py-3 font-medium">{a.borrower?.firstName} {a.borrower?.lastName}</td>
+                  <td className="px-4 py-3">{a.product?.name ?? '—'}</td>
+                  <td className="px-4 py-3 font-semibold">R {(a.amountRequested / 100).toLocaleString()}</td>
+                  <td className="px-4 py-3">{a.termMonths}m</td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-semibold" style={{ color: STATUS_COLORS[a.status] ?? 'var(--color-muted)' }}>
+                      {a.status.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-muted)' }}>
+                    {new Date(a.submittedAt).toLocaleDateString('en-ZA')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </PartnerLayout>
   );
