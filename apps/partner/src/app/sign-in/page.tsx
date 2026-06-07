@@ -15,12 +15,11 @@ export default function PartnerSignIn() {
   const [savedSession, setSavedSession] = useState<ReturnType<typeof getSession>>(null);
   const SAVED_API_KEY = 'capstack_partner_saved_api';
 
-  useEffect(() => { 
+  useEffect(() => {
     setSavedSession(getSession());
     const stored = typeof window !== 'undefined' ? localStorage.getItem(SAVED_API_KEY) : null;
     if (stored) setApiKey(stored);
   }, []);
-  useEffect(() => { setSavedSession(getSession()); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,7 +99,7 @@ export default function PartnerSignIn() {
                 outline:    'none',
               }}
             />
-            {savedSession && (
+            {savedSession ? (
               <div className="flex items-center justify-between mt-2">
                 <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
                   Signed in as <span className="font-mono text-xs">{savedSession.name}</span> (saved)
@@ -109,18 +108,39 @@ export default function PartnerSignIn() {
                   <button
                     type="button"
                     onClick={() => {
-                      // For demo session, autofill the demo key. Otherwise continue into the app.
-                          if (savedSession.id === 'partner-demo') {
-                            setApiKey('demo');
-                            try { localStorage.setItem(SAVED_API_KEY, 'demo'); } catch {}
-                          } else {
-                            router.replace('/loans');
-                          }
+                      if (savedSession.id === 'partner-demo') {
+                        setApiKey('demo');
+                        try { localStorage.setItem(SAVED_API_KEY, 'demo'); } catch {}
+                      } else {
+                        router.replace('/loans');
+                      }
                     }}
                     className="text-xs font-semibold px-3 py-1 rounded"
                     style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
                   >
                     Use saved
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                  No saved session
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // For now: create a demo session and saved demo API, then proceed.
+                      setSession({ id: 'partner-demo', name: 'Demo Partner', slug: 'demo-partner', lenderId: 'lender-001', type: 'partner' });
+                      try { localStorage.setItem(SAVED_API_KEY, 'demo'); } catch {}
+                      try { localStorage.setItem('capstack_partner_session', JSON.stringify({ id: 'partner-demo', name: 'Demo Partner', slug: 'demo-partner', lenderId: 'lender-001', type: 'partner' })); } catch {}
+                      router.replace('/loans');
+                    }}
+                    className="text-xs font-semibold px-3 py-1 rounded"
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                  >
+                    Use demo
                   </button>
                 </div>
               </div>
