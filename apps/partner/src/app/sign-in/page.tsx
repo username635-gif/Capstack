@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { setSession } from '@/lib/session';
+import { getSession } from '@/lib/session';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://capstack-api.vercel.app';
 
@@ -11,6 +12,15 @@ export default function PartnerSignIn() {
   const [apiKey,   setApiKey]  = useState('');
   const [error,    setError]   = useState<string | null>(null);
   const [loading,  setLoading] = useState(false);
+  const [savedSession, setSavedSession] = useState<ReturnType<typeof getSession>>(null);
+  const SAVED_API_KEY = 'capstack_partner_saved_api';
+
+  useEffect(() => { 
+    setSavedSession(getSession());
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(SAVED_API_KEY) : null;
+    if (stored) setApiKey(stored);
+  }, []);
+  useEffect(() => { setSavedSession(getSession()); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -90,6 +100,31 @@ export default function PartnerSignIn() {
                 outline:    'none',
               }}
             />
+            {savedSession && (
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
+                  Signed in as <span className="font-mono text-xs">{savedSession.name}</span> (saved)
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // For demo session, autofill the demo key. Otherwise continue into the app.
+                          if (savedSession.id === 'partner-demo') {
+                            setApiKey('demo');
+                            try { localStorage.setItem(SAVED_API_KEY, 'demo'); } catch {}
+                          } else {
+                            router.replace('/loans');
+                          }
+                    }}
+                    className="text-xs font-semibold px-3 py-1 rounded"
+                    style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
+                  >
+                    Use saved
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
