@@ -117,8 +117,8 @@ export default function PartnerSignIn() {
                     }}
                     className="text-xs font-semibold px-3 py-1 rounded"
                     style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
-                  >
-                    Use saved
+                    >
+                    Saved key
                   </button>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function PartnerSignIn() {
                     className="text-xs font-semibold px-3 py-1 rounded"
                     style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', color: 'var(--foreground)' }}
                   >
-                    Use demo
+                    Saved key
                   </button>
                 </div>
               </div>
